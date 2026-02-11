@@ -119,6 +119,11 @@ func initialize(id: String, data: Dictionary) -> void:
 	var stat_data: Dictionary = data.get("stats", {})
 	stats.initialize(stat_data)
 
+	# 加载精灵纹理
+	var sprite_path: String = data.get("sprite", "")
+	if sprite_path != "" and ResourceLoader.exists(sprite_path):
+		sprite.texture = load(sprite_path)
+
 	# 初始化攻击间隔（用速度反算，速度越快间隔越短）
 	var spd: float = stats.get_stat("speed")
 	_base_attack_interval = 1.5 if spd <= 0.0 else maxf(0.5, 2.0 - spd / 100.0)
