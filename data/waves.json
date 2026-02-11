@@ -1,0 +1,112 @@
+{
+  "shared_hp_pool": {
+    "by_player_count": {
+      "1": { "initial_hp": 60, "enemy_hp_coeff": 0.4, "enemy_count_coeff": 0.5, "resource_drop_coeff": 1.2 },
+      "2": { "initial_hp": 75, "enemy_hp_coeff": 0.7, "enemy_count_coeff": 0.7, "resource_drop_coeff": 1.0 },
+      "3": { "initial_hp": 90, "enemy_hp_coeff": 0.85, "enemy_count_coeff": 0.85, "resource_drop_coeff": 0.95 },
+      "4": { "initial_hp": 100, "enemy_hp_coeff": 1.0, "enemy_count_coeff": 1.0, "resource_drop_coeff": 0.9 }
+    },
+    "last_stand_threshold": 0.30,
+    "last_stand_attack_bonus": 0.20
+  },
+  "stages": [
+    {
+      "id": "stage_1_tutorial",
+      "name": "引导阶段",
+      "stage_number": 1,
+      "waves": [
+        {
+          "id": "wave_1_1",
+          "label": "教学",
+          "enemies": [
+            { "type": "slime", "count": 10, "interval": 0.5 }
+          ],
+          "spawn_routes": ["north"],
+          "duration": 20,
+          "rewards": { "gold": 100, "exp": 20 },
+          "tutorial_text": "点击屏幕移动英雄，消灭所有史莱姆！"
+        },
+        {
+          "id": "wave_1_2",
+          "label": "初战",
+          "enemies": [
+            { "type": "goblin", "count": 20, "interval": 0.4 }
+          ],
+          "spawn_routes": ["north"],
+          "duration": 30,
+          "rewards": { "gold": 20, "crystal": 20, "badge": 10, "exp": 50 },
+          "tutorial_text": "哥布林比史莱姆更强，注意走位！"
+        }
+      ]
+    },
+    {
+      "id": "stage_2",
+      "name": "第二阶段",
+      "stage_number": 2,
+      "waves": [
+        {
+          "id": "wave_2_1",
+          "label": "热身",
+          "tension": 1,
+          "enemies": [
+            { "type": "skeleton", "count": 30, "interval": 0.3 }
+          ],
+          "spawn_routes": ["north"],
+          "duration": 30,
+          "rewards": { "gold": 30, "exp": 30 }
+        },
+        {
+          "id": "wave_2_2",
+          "label": "试探",
+          "tension": 2,
+          "enemies": [
+            { "type": "skeleton", "count": 30, "interval": 0.25 },
+            { "type": "ghost", "count": 10, "interval": 0.5 }
+          ],
+          "spawn_routes": ["north", "east"],
+          "duration": 40,
+          "rewards": { "gold": 40, "exp": 40 }
+        },
+        {
+          "id": "wave_2_3",
+          "label": "策略",
+          "tension": 3,
+          "enemies": [
+            { "type": "skeleton", "count": 25, "interval": 0.2 },
+            { "type": "zombie", "count": 15, "interval": 0.4 },
+            { "type": "orc_elite", "count": 1, "interval": 0, "delay": 15 }
+          ],
+          "spawn_routes": ["north", "east"],
+          "duration": 50,
+          "rewards": { "gold": 60, "crystal": 5, "exp": 60 }
+        },
+        {
+          "id": "wave_2_4",
+          "label": "压力",
+          "tension": 4,
+          "enemies": [
+            { "type": "skeleton", "count": 20, "interval": 0.2 },
+            { "type": "ghost", "count": 15, "interval": 0.3 },
+            { "type": "zombie", "count": 10, "interval": 0.4 },
+            { "type": "orc_elite", "count": 3, "interval": 0, "delay": 10 }
+          ],
+          "spawn_routes": ["north", "east"],
+          "duration": 60,
+          "rewards": { "gold": 80, "crystal": 8, "exp": 80 }
+        },
+        {
+          "id": "wave_2_5",
+          "label": "BOSS",
+          "tension": 5,
+          "enemies": [
+            { "type": "demon_boss", "count": 1, "interval": 0, "delay": 5 },
+            { "type": "skeleton", "count": 0, "spawn_continuous": true, "spawn_rate": 5, "spawn_interval": 12 }
+          ],
+          "spawn_routes": ["north", "east"],
+          "duration": 90,
+          "rewards": { "gold": 150, "crystal": 15, "badge": 5, "exp": 150 }
+        }
+      ]
+    }
+  ]
+}

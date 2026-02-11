@@ -1,0 +1,159 @@
+{
+  "heroes": [
+    {
+      "id": "wolf_knight",
+      "name": "白狼骑士",
+      "type": "melee_physical",
+      "sprite": "res://assets/sprites/heroes/knight.png",
+      "base_stats": {
+        "hp": 120,
+        "attack": 18,
+        "defense": 15,
+        "speed": 100,
+        "attack_speed": 1.0,
+        "attack_range": 40,
+        "crit_rate": 0.10,
+        "spell_power": 5
+      },
+      "auto_attack": {
+        "pattern": "fan_sweep",
+        "angle": 120,
+        "hit_count_threshold": 3,
+        "on_threshold_effect": "attack_speed_boost"
+      },
+      "skills": [
+        {
+          "id": "wolf_slash",
+          "name": "狼牙斩",
+          "type": "normal_attack",
+          "description": "扇形挥砍，命中3个以上敌人获得攻速加成",
+          "damage_ratio": 1.0,
+          "pattern": "fan_sweep",
+          "angle": 120
+        },
+        {
+          "id": "wolf_rush",
+          "name": "奔狼突袭",
+          "type": "active",
+          "slot": 1,
+          "description": "短距离冲刺，路径伤害+减速",
+          "cooldown": 10.0,
+          "damage_ratio": 2.0,
+          "range": 80,
+          "effects": [
+            { "type": "slow", "value": 0.3, "duration": 2.0 }
+          ]
+        },
+        {
+          "id": "wolf_howl",
+          "name": "狼嚎战吼",
+          "type": "active",
+          "slot": 2,
+          "description": "AOE恐惧2秒+自身护盾",
+          "cooldown": 15.0,
+          "radius": 64,
+          "effects": [
+            { "type": "fear", "duration": 2.0 },
+            { "type": "shield", "value": 30, "duration": 5.0 }
+          ]
+        },
+        {
+          "id": "blood_instinct",
+          "name": "嗜血本能",
+          "type": "passive",
+          "description": "生命值低于30%时攻击力+40%，击杀敌人回复生命",
+          "trigger_hp_percent": 0.30,
+          "attack_boost": 0.40,
+          "heal_on_kill": 10
+        },
+        {
+          "id": "wolf_form",
+          "name": "白狼化身",
+          "type": "ultimate",
+          "description": "变身8秒，攻击范围和攻速大幅提升",
+          "duration": 8.0,
+          "charge_condition": { "type": "kill_count", "value": 50 },
+          "attack_range_bonus": 1.5,
+          "attack_speed_bonus": 0.5
+        }
+      ]
+    },
+    {
+      "id": "meteor_mage",
+      "name": "流星法师",
+      "type": "ranged_magic",
+      "sprite": "res://assets/sprites/heroes/mage.png",
+      "base_stats": {
+        "hp": 70,
+        "attack": 10,
+        "defense": 5,
+        "speed": 90,
+        "attack_speed": 0.8,
+        "attack_range": 120,
+        "crit_rate": 0.05,
+        "spell_power": 25
+      },
+      "auto_attack": {
+        "pattern": "aoe_impact",
+        "radius": 32
+      },
+      "skills": [
+        {
+          "id": "meteor_shard",
+          "name": "陨石碎片",
+          "type": "normal_attack",
+          "description": "远程AOE落点攻击，小范围爆炸",
+          "damage_ratio": 1.0,
+          "pattern": "aoe_impact",
+          "radius": 32
+        },
+        {
+          "id": "meteor_shower",
+          "name": "流星雨",
+          "type": "active",
+          "slot": 1,
+          "description": "区域持续3秒+减速30%",
+          "cooldown": 12.0,
+          "duration": 3.0,
+          "damage_ratio": 0.5,
+          "tick_interval": 0.5,
+          "radius": 64,
+          "effects": [
+            { "type": "slow", "value": 0.3, "duration": 3.0 }
+          ]
+        },
+        {
+          "id": "comet_strike",
+          "name": "彗星撞击",
+          "type": "active",
+          "slot": 2,
+          "description": "直线高伤害+击退",
+          "cooldown": 14.0,
+          "damage_ratio": 3.5,
+          "range": 120,
+          "effects": [
+            { "type": "knockback", "force": 100 }
+          ]
+        },
+        {
+          "id": "starfire_spread",
+          "name": "星火燎原",
+          "type": "passive",
+          "description": "被陨石命中的敌人附带灼烧DOT（3秒）",
+          "dot_damage": 5,
+          "dot_duration": 3.0,
+          "dot_tick_interval": 1.0
+        },
+        {
+          "id": "celestial_fall",
+          "name": "天陨",
+          "type": "ultimate",
+          "description": "巨型陨石，大范围毁灭性打击",
+          "radius": 128,
+          "damage_ratio": 10.0,
+          "charge_condition": { "type": "damage_dealt", "value": 3000 }
+        }
+      ]
+    }
+  ]
+}

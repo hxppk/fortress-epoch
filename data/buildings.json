@@ -1,0 +1,99 @@
+{
+  "buildings": [
+    {
+      "id": "arrow_tower",
+      "name": "箭塔",
+      "category": "safety",
+      "sprite": "res://assets/sprites/buildings/arrow_tower.png",
+      "description": "自动攻击范围内的敌人",
+      "levels": [
+        {
+          "level": 1,
+          "damage": 8,
+          "range": 96,
+          "attack_speed": 1.0,
+          "upgrade_cost": { "gold": 50 }
+        },
+        {
+          "level": 2,
+          "damage": 15,
+          "range": 128,
+          "attack_speed": 0.8,
+          "upgrade_cost": { "gold": 120 }
+        },
+        {
+          "level": 3,
+          "damage": 25,
+          "range": 160,
+          "attack_speed": 0.6,
+          "upgrade_cost": { "gold": 250 }
+        }
+      ]
+    },
+    {
+      "id": "gold_mine",
+      "name": "金矿",
+      "category": "economy",
+      "sprite": "res://assets/sprites/buildings/gold_mine.png",
+      "description": "自动产出金币，提升击杀金币加成",
+      "levels": [
+        {
+          "level": 1,
+          "production": 5,
+          "production_interval": 10.0,
+          "kill_gold_bonus": 0.10,
+          "upgrade_cost": { "gold": 50 }
+        },
+        {
+          "level": 2,
+          "production": 10,
+          "production_interval": 10.0,
+          "kill_gold_bonus": 0.25,
+          "upgrade_cost": { "gold": 120 }
+        },
+        {
+          "level": 3,
+          "production": 15,
+          "production_interval": 10.0,
+          "kill_gold_bonus": 0.50,
+          "special": "有概率产出水晶",
+          "crystal_chance": 0.10,
+          "upgrade_cost": { "gold": 250 }
+        }
+      ]
+    },
+    {
+      "id": "barracks",
+      "name": "兵营",
+      "category": "military",
+      "sprite": "res://assets/sprites/buildings/barracks.png",
+      "description": "升级后提升所有英雄属性",
+      "levels": [
+        {
+          "level": 1,
+          "phys_attack_bonus": 10,
+          "magic_attack_bonus": 10,
+          "hp_bonus": 50,
+          "armor_bonus": 2,
+          "upgrade_cost": { "exp": 0 }
+        },
+        {
+          "level": 2,
+          "phys_attack_bonus": 25,
+          "magic_attack_bonus": 25,
+          "hp_bonus": 120,
+          "armor_bonus": 5,
+          "upgrade_cost": { "exp": 100 }
+        },
+        {
+          "level": 3,
+          "phys_attack_bonus": 45,
+          "magic_attack_bonus": 45,
+          "hp_bonus": 220,
+          "armor_bonus": 10,
+          "upgrade_cost": { "exp": 250 }
+        }
+      ]
+    }
+  ]
+}

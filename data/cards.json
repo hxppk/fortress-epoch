@@ -1,0 +1,203 @@
+{
+  "rarity_weights": {
+    "common": 0.60,
+    "uncommon": 0.25,
+    "epic": 0.12,
+    "legendary": 0.03
+  },
+  "rarity_colors": {
+    "common": "#FFFFFF",
+    "uncommon": "#4A90D9",
+    "epic": "#9B59B6",
+    "legendary": "#F1C40F"
+  },
+  "cards": [
+    {
+      "id": "skill_damage_boost",
+      "name": "技能强化",
+      "category": "skill",
+      "rarity": "common",
+      "icon_color": "red",
+      "source_building": "safety",
+      "description": "所有技能伤害提升30%",
+      "effects": [
+        { "type": "skill_damage", "value": 0.30 }
+      ]
+    },
+    {
+      "id": "skill_cd_reduce",
+      "name": "冷却缩减",
+      "category": "skill",
+      "rarity": "common",
+      "icon_color": "red",
+      "source_building": "safety",
+      "description": "所有技能冷却时间减少20%",
+      "effects": [
+        { "type": "skill_cd", "value": -0.20 }
+      ]
+    },
+    {
+      "id": "skill_range_up",
+      "name": "范围扩展",
+      "category": "skill",
+      "rarity": "uncommon",
+      "icon_color": "red",
+      "source_building": "safety",
+      "description": "所有技能范围增大50%",
+      "effects": [
+        { "type": "skill_range", "value": 0.50 }
+      ]
+    },
+    {
+      "id": "wolf_rush_enhance",
+      "name": "奔狼强化",
+      "category": "skill",
+      "rarity": "uncommon",
+      "icon_color": "red",
+      "source_building": "safety",
+      "description": "奔狼突袭伤害提升50%，减速延长1秒",
+      "hero_filter": "wolf_knight",
+      "effects": [
+        { "type": "skill_specific", "skill_id": "wolf_rush", "damage_bonus": 0.50 },
+        { "type": "skill_specific", "skill_id": "wolf_rush", "slow_duration_bonus": 1.0 }
+      ]
+    },
+    {
+      "id": "meteor_shower_enhance",
+      "name": "流星强化",
+      "category": "skill",
+      "rarity": "epic",
+      "icon_color": "red",
+      "source_building": "safety",
+      "description": "流星雨持续时间+2秒，减速效果+15%",
+      "hero_filter": "meteor_mage",
+      "effects": [
+        { "type": "skill_specific", "skill_id": "meteor_shower", "duration_bonus": 2.0 },
+        { "type": "skill_specific", "skill_id": "meteor_shower", "slow_bonus": 0.15 }
+      ]
+    },
+    {
+      "id": "atk_boost",
+      "name": "力量提升",
+      "category": "attribute",
+      "rarity": "common",
+      "icon_color": "blue",
+      "source_building": "military",
+      "description": "攻击力永久+8",
+      "effects": [
+        { "type": "attack", "value": 8 }
+      ]
+    },
+    {
+      "id": "hp_boost",
+      "name": "生命强化",
+      "category": "attribute",
+      "rarity": "common",
+      "icon_color": "blue",
+      "source_building": "military",
+      "description": "最大生命值永久+30",
+      "effects": [
+        { "type": "max_hp", "value": 30 }
+      ]
+    },
+    {
+      "id": "speed_boost",
+      "name": "疾风之力",
+      "category": "attribute",
+      "rarity": "common",
+      "icon_color": "blue",
+      "source_building": "military",
+      "description": "攻击速度提升15%",
+      "effects": [
+        { "type": "attack_speed", "value": 0.15 }
+      ]
+    },
+    {
+      "id": "crit_boost",
+      "name": "致命直觉",
+      "category": "attribute",
+      "rarity": "uncommon",
+      "icon_color": "blue",
+      "source_building": "military",
+      "description": "暴击率提升10%",
+      "effects": [
+        { "type": "crit_rate", "value": 0.10 }
+      ]
+    },
+    {
+      "id": "all_stats",
+      "name": "全面强化",
+      "category": "attribute",
+      "rarity": "epic",
+      "icon_color": "blue",
+      "source_building": "military",
+      "description": "全属性小幅提升",
+      "effects": [
+        { "type": "attack", "value": 5 },
+        { "type": "max_hp", "value": 20 },
+        { "type": "defense", "value": 3 },
+        { "type": "speed", "value": 0.10 }
+      ]
+    },
+    {
+      "id": "gold_per_kill",
+      "name": "拾金术",
+      "category": "resource",
+      "rarity": "common",
+      "icon_color": "gold",
+      "source_building": "economy",
+      "description": "击杀怪物获得的金币增加20%",
+      "effects": [
+        { "type": "kill_gold", "value": 0.20 }
+      ]
+    },
+    {
+      "id": "exp_boost",
+      "name": "经验加成",
+      "category": "resource",
+      "rarity": "common",
+      "icon_color": "gold",
+      "source_building": "economy",
+      "description": "经验获取量提升15%",
+      "effects": [
+        { "type": "exp_gain", "value": 0.15 }
+      ]
+    },
+    {
+      "id": "double_drop",
+      "name": "双倍掉落",
+      "category": "resource",
+      "rarity": "uncommon",
+      "icon_color": "gold",
+      "source_building": "economy",
+      "description": "击杀时15%概率获得双倍掉落",
+      "effects": [
+        { "type": "double_loot_chance", "value": 0.15 }
+      ]
+    },
+    {
+      "id": "auto_gold",
+      "name": "金币涌泉",
+      "category": "resource",
+      "rarity": "uncommon",
+      "icon_color": "gold",
+      "source_building": "economy",
+      "description": "每10秒自动获得3金币",
+      "effects": [
+        { "type": "passive_gold", "value": 3, "interval": 10.0 }
+      ]
+    },
+    {
+      "id": "crystal_finder",
+      "name": "水晶矿脉",
+      "category": "resource",
+      "rarity": "epic",
+      "icon_color": "gold",
+      "source_building": "economy",
+      "description": "水晶掉落概率大幅提升",
+      "effects": [
+        { "type": "crystal_drop_rate", "value": 0.10 }
+      ]
+    }
+  ]
+}

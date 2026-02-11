@@ -1,0 +1,138 @@
+{
+  "enemies": [
+    {
+      "id": "slime",
+      "name": "史莱姆",
+      "type": "basic",
+      "sprite": "res://assets/sprites/enemies/slime.png",
+      "behavior": "straight_charge",
+      "stats": { "hp": 50, "attack": 5, "defense": 0, "speed": 50 },
+      "threat": "low",
+      "loot": { "gold": [3, 5], "crystal": 0, "exp": [5, 8] },
+      "note": "教学专用"
+    },
+    {
+      "id": "goblin",
+      "name": "哥布林",
+      "type": "basic",
+      "sprite": "res://assets/sprites/enemies/goblin.png",
+      "behavior": "straight_charge",
+      "stats": { "hp": 100, "attack": 10, "defense": 1, "speed": 60 },
+      "threat": "low",
+      "loot": { "gold": [5, 10], "crystal": 0, "exp": [10, 15] },
+      "note": "教学专用"
+    },
+    {
+      "id": "skeleton",
+      "name": "骷髅",
+      "type": "basic",
+      "sprite": "res://assets/sprites/enemies/skeleton.png",
+      "behavior": "straight_charge",
+      "stats": { "hp": 100, "attack": 8, "defense": 2, "speed": 60 },
+      "threat": "low",
+      "loot": {
+        "gold": [5, 10],
+        "crystal": 0,
+        "crystal_chance": 0.05,
+        "crystal_bonus": 1,
+        "exp": [10, 15]
+      }
+    },
+    {
+      "id": "ghost",
+      "name": "幽灵",
+      "type": "basic",
+      "sprite": "res://assets/sprites/enemies/ghost.png",
+      "behavior": "fast_approach",
+      "stats": { "hp": 60, "attack": 6, "defense": 0, "speed": 120 },
+      "threat": "medium",
+      "special": "高速低血量",
+      "loot": {
+        "gold": [5, 10],
+        "crystal": 0,
+        "crystal_chance": 0.05,
+        "crystal_bonus": 1,
+        "exp": [10, 15]
+      }
+    },
+    {
+      "id": "zombie",
+      "name": "僵尸",
+      "type": "basic",
+      "sprite": "res://assets/sprites/enemies/zombie.png",
+      "behavior": "slow_tank",
+      "stats": { "hp": 200, "attack": 12, "defense": 5, "speed": 35 },
+      "threat": "medium",
+      "special": "高血量低速度",
+      "loot": {
+        "gold": [5, 10],
+        "crystal": 0,
+        "crystal_chance": 0.05,
+        "crystal_bonus": 1,
+        "exp": [10, 15]
+      }
+    },
+    {
+      "id": "orc_elite",
+      "name": "兽人精英",
+      "type": "elite",
+      "sprite": "res://assets/sprites/enemies/orc_elite.png",
+      "behavior": "charge_and_slash",
+      "stats": { "hp": 500, "attack": 20, "defense": 8, "speed": 70 },
+      "threat": "high",
+      "special": "每损失25%生命值狂暴一次，攻速+50%",
+      "enrage_thresholds": [0.75, 0.50, 0.25],
+      "enrage_attack_speed_bonus": 0.5,
+      "loot": {
+        "gold": [30, 50],
+        "crystal": [3, 5],
+        "badge": 0,
+        "badge_chance": 0.15,
+        "badge_bonus": 1,
+        "exp": [50, 80]
+      }
+    },
+    {
+      "id": "demon_boss",
+      "name": "恶魔BOSS",
+      "type": "boss",
+      "sprite": "res://assets/sprites/enemies/demon_boss.png",
+      "behavior": "two_phase",
+      "stats": { "hp": 3000, "attack": 30, "defense": 15, "speed": 50 },
+      "threat": "extreme",
+      "phases": [
+        {
+          "name": "普通",
+          "hp_range": [1.0, 0.6],
+          "description": "基础攻击模式"
+        },
+        {
+          "name": "狂暴",
+          "hp_range": [0.6, 0.0],
+          "description": "攻击力+50%，攻速+30%",
+          "attack_bonus": 0.5,
+          "attack_speed_bonus": 0.3
+        }
+      ],
+      "loot": {
+        "gold": [100, 150],
+        "crystal": [10, 15],
+        "badge": [3, 5],
+        "exp": [200, 300]
+      }
+    }
+  ],
+  "scaling": {
+    "description": "跨阶段难度缩放",
+    "per_stage": {
+      "hp_multiplier": 1.5,
+      "attack_multiplier": 1.3
+    },
+    "elite_spawn_rate_by_stage": [0.10, 0.20, 0.25, 0.30],
+    "stage_base_hp": {
+      "basic": [100, 180, 300, 500],
+      "elite": [500, 900, 1500, 2500],
+      "boss": [3000, 6000, 12000, 25000]
+    }
+  }
+}

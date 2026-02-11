@@ -1,0 +1,20 @@
+[gd_scene format=3 uid="uid://game_session"]
+
+[node name="GameSession" type="Node2D"]
+
+[node name="Map" type="Node2D" parent="."]
+
+[node name="Entities" type="Node2D" parent="."]
+
+[node name="Heroes" type="Node2D" parent="Entities"]
+
+[node name="Enemies" type="Node2D" parent="Entities"]
+
+[node name="Buildings" type="Node2D" parent="Entities"]
+
+[node name="Projectiles" type="Node2D" parent="Entities"]
+
+[node name="UI" type="CanvasLayer" parent="."]
+
+[node name="Camera2D" type="Camera2D" parent="."]
+zoom = Vector2(2, 2)
