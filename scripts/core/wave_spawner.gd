@@ -20,13 +20,13 @@ const WAVES_JSON_PATH: String = "res://data/waves.json"
 
 ## 敌人场景路径映射
 const ENEMY_SCENE_MAP: Dictionary = {
-	"slime": "res://scenes/enemies/slime.tscn",
-	"goblin": "res://scenes/enemies/goblin.tscn",
-	"skeleton": "res://scenes/enemies/skeleton.tscn",
-	"ghost": "res://scenes/enemies/ghost.tscn",
-	"zombie": "res://scenes/enemies/zombie.tscn",
-	"orc_elite": "res://scenes/enemies/orc_elite.tscn",
-	"demon_boss": "res://scenes/enemies/demon_boss.tscn",
+	"slime": "res://scenes/entities/enemies/slime.tscn",
+	"goblin": "res://scenes/entities/enemies/goblin.tscn",
+	"skeleton": "res://scenes/entities/enemies/skeleton.tscn",
+	"ghost": "res://scenes/entities/enemies/ghost.tscn",
+	"zombie": "res://scenes/entities/enemies/zombie.tscn",
+	"orc_elite": "res://scenes/entities/enemies/orc_elite.tscn",
+	"demon_boss": "res://scenes/entities/enemies/demon_boss.tscn",
 }
 
 # ============================================================
@@ -381,6 +381,12 @@ func _distribute_rewards(rewards: Dictionary) -> void:
 ## 是否所有波次已结束
 func is_all_waves_complete() -> bool:
 	return _all_completed
+
+
+## 获取当前阶段的总波次数
+func get_total_waves() -> int:
+	var waves: Array = current_stage_data.get("waves", [])
+	return waves.size()
 
 # ============================================================
 # 数据加载

@@ -83,8 +83,7 @@ func _on_card_selected(data: Dictionary) -> void:
 			card_node.play_dismiss_animation()
 
 	# 等待 0.5 秒动画完成
-	var timer := get_tree().create_timer(0.5, true, false, true)
-	await timer.timeout
+	await get_tree().create_timer(0.5, true).timeout
 
 	# 发出选择完成信号
 	card_selected.emit(data)

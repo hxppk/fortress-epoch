@@ -9,8 +9,8 @@ extends Node
 
 ## 计算伤害，返回 { "damage": int, "is_crit": bool }
 func calculate_damage(attacker: StatsComponent, defender: StatsComponent) -> Dictionary:
-	var atk: float = attacker.get_stat("atk")
-	var def: float = defender.get_stat("def")
+	var atk: float = attacker.get_stat("attack")
+	var def: float = defender.get_stat("defense")
 	var crit_rate: float = attacker.get_stat("crit_rate")  # 0.0 ~ 1.0
 
 	var base_damage: int = maxi(int(atk - def), 1)
