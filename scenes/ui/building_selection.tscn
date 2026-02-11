@@ -1,0 +1,151 @@
+[gd_scene load_steps=2 format=3 uid="uid://building_selection"]
+
+[ext_resource type="Script" path="res://scripts/ui/building_selection_ui.gd" id="1_script"]
+
+[node name="BuildingSelection" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+process_mode = 3
+script = ExtResource("1_script")
+
+[node name="DimOverlay" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.6)
+
+[node name="VBoxContainer" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -270.0
+offset_top = -180.0
+offset_right = 270.0
+offset_bottom = 180.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 16
+alignment = 1
+
+[node name="Title" type="Label" parent="VBoxContainer"]
+layout_mode = 2
+text = "选择建筑"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="CardsContainer" type="HBoxContainer" parent="VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 20
+alignment = 1
+
+[node name="Card1" type="PanelContainer" parent="VBoxContainer/CardsContainer"]
+custom_minimum_size = Vector2(160, 0)
+layout_mode = 2
+size_flags_horizontal = 4
+
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/CardsContainer/Card1"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="ColorBanner" type="ColorRect" parent="VBoxContainer/CardsContainer/Card1/VBoxContainer"]
+custom_minimum_size = Vector2(0, 6)
+layout_mode = 2
+color = Color(0.5, 0.5, 0.5, 1)
+
+[node name="NameLabel" type="Label" parent="VBoxContainer/CardsContainer/Card1/VBoxContainer"]
+layout_mode = 2
+text = "建筑名称"
+horizontal_alignment = 1
+
+[node name="DescLabel" type="Label" parent="VBoxContainer/CardsContainer/Card1/VBoxContainer"]
+layout_mode = 2
+text = "描述文字"
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="StatsLabel" type="Label" parent="VBoxContainer/CardsContainer/Card1/VBoxContainer"]
+layout_mode = 2
+text = "数值信息"
+horizontal_alignment = 1
+
+[node name="SelectButton" type="Button" parent="VBoxContainer/CardsContainer/Card1/VBoxContainer"]
+layout_mode = 2
+text = "选择"
+
+[node name="Card2" type="PanelContainer" parent="VBoxContainer/CardsContainer"]
+custom_minimum_size = Vector2(160, 0)
+layout_mode = 2
+size_flags_horizontal = 4
+
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/CardsContainer/Card2"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="ColorBanner" type="ColorRect" parent="VBoxContainer/CardsContainer/Card2/VBoxContainer"]
+custom_minimum_size = Vector2(0, 6)
+layout_mode = 2
+color = Color(0.5, 0.5, 0.5, 1)
+
+[node name="NameLabel" type="Label" parent="VBoxContainer/CardsContainer/Card2/VBoxContainer"]
+layout_mode = 2
+text = "建筑名称"
+horizontal_alignment = 1
+
+[node name="DescLabel" type="Label" parent="VBoxContainer/CardsContainer/Card2/VBoxContainer"]
+layout_mode = 2
+text = "描述文字"
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="StatsLabel" type="Label" parent="VBoxContainer/CardsContainer/Card2/VBoxContainer"]
+layout_mode = 2
+text = "数值信息"
+horizontal_alignment = 1
+
+[node name="SelectButton" type="Button" parent="VBoxContainer/CardsContainer/Card2/VBoxContainer"]
+layout_mode = 2
+text = "选择"
+
+[node name="Card3" type="PanelContainer" parent="VBoxContainer/CardsContainer"]
+custom_minimum_size = Vector2(160, 0)
+layout_mode = 2
+size_flags_horizontal = 4
+
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/CardsContainer/Card3"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="ColorBanner" type="ColorRect" parent="VBoxContainer/CardsContainer/Card3/VBoxContainer"]
+custom_minimum_size = Vector2(0, 6)
+layout_mode = 2
+color = Color(0.5, 0.5, 0.5, 1)
+
+[node name="NameLabel" type="Label" parent="VBoxContainer/CardsContainer/Card3/VBoxContainer"]
+layout_mode = 2
+text = "建筑名称"
+horizontal_alignment = 1
+
+[node name="DescLabel" type="Label" parent="VBoxContainer/CardsContainer/Card3/VBoxContainer"]
+layout_mode = 2
+text = "描述文字"
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="StatsLabel" type="Label" parent="VBoxContainer/CardsContainer/Card3/VBoxContainer"]
+layout_mode = 2
+text = "数值信息"
+horizontal_alignment = 1
+
+[node name="SelectButton" type="Button" parent="VBoxContainer/CardsContainer/Card3/VBoxContainer"]
+layout_mode = 2
+text = "选择"

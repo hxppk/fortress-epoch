@@ -13,6 +13,8 @@ signal game_state_changed(new_state: String)
 signal kill_recorded(total_kills: int)
 signal last_stand_activated()
 signal game_over(victory: bool)
+signal exp_changed(current_exp: int, next_threshold: int)
+signal town_level_up(new_level: int)
 
 # ============================================================
 # 属性
@@ -50,6 +52,15 @@ var total_damage_dealt: float = 0.0
 
 # 标记是否已经触发过 last_stand，避免重复发信号
 var _last_stand_triggered: bool = false
+
+## 城镇等级
+var town_level: int = 0
+
+## 升级所需累计经验阈值
+var exp_thresholds: Array = [0, 20, 70, 170, 370, 600]
+
+## 累计经验
+var total_exp: int = 0
 
 # ============================================================
 # 生命周期
@@ -105,6 +116,13 @@ func take_shared_damage(amount: int) -> void:
 ## 记录一次击杀
 func record_kill() -> void:
 	kill_count += 1
+
+	# 击杀金币加成：每次击杀获得基础金币 + BuildingManager 的加成
+	var base_kill_gold: int = 1
+	var bonus_gold: int = get_kill_gold(base_kill_gold)
+	if bonus_gold > 0:
+		add_resource("gold", bonus_gold)
+
 	kill_recorded.emit(kill_count)
 
 
@@ -134,6 +152,8 @@ func start_game() -> void:
 	kill_count = 0
 	total_damage_dealt = 0.0
 	_last_stand_triggered = false
+	town_level = 0
+	total_exp = 0
 	game_state = "playing"
 	shared_hp_changed.emit(shared_hp, max_shared_hp)
 
@@ -142,3 +162,56 @@ func start_game() -> void:
 func end_game(victory: bool) -> void:
 	game_state = "game_over"
 	game_over.emit(victory)
+
+# ============================================================
+# 经验 / 城镇等级
+# ============================================================
+
+## 添加经验，检查是否升级
+func add_exp(amount: int) -> void:
+	total_exp += amount
+	_check_town_level_up()
+
+	# 计算下一级阈值用于 UI 显示
+	var next_threshold: int = _get_next_exp_threshold()
+	exp_changed.emit(total_exp, next_threshold)
+
+
+## 检查城镇等级提升
+func _check_town_level_up() -> void:
+	# 持续检查，支持一次性跨多级升级
+	while true:
+		var next_level: int = town_level + 1
+		if next_level >= exp_thresholds.size():
+			break  # 已达最高等级
+
+		if total_exp >= exp_thresholds[next_level]:
+			town_level = next_level
+			town_level_up.emit(town_level)
+		else:
+			break
+
+
+## 计算含加成的击杀金币（联动 BuildingManager）
+func get_kill_gold(base_gold: int) -> int:
+	var bonus: float = 0.0
+	var bm: Node = get_node_or_null("/root/BuildingManager")
+	if bm and bm.has_method("get_kill_gold_bonus"):
+		bonus = bm.get_kill_gold_bonus()
+
+	var final_gold: float = float(base_gold) * (1.0 + bonus)
+	return roundi(final_gold)
+
+
+## 获取当前城镇等级
+func get_town_level() -> int:
+	return town_level
+
+
+## 获取下一级经验阈值（内部辅助）
+func _get_next_exp_threshold() -> int:
+	var next_level: int = town_level + 1
+	if next_level < exp_thresholds.size():
+		return exp_thresholds[next_level]
+	# 已满级，返回当前阈值
+	return exp_thresholds[exp_thresholds.size() - 1]

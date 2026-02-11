@@ -17,6 +17,8 @@ const MeteorMageScene := preload("res://scenes/entities/heroes/meteor_mage.tscn"
 @onready var enemy_pool: EnemyPool = $EnemyPool
 @onready var tower_placement: TowerPlacement = $TowerPlacement
 @onready var hud: Control = $UI/HUD
+@onready var building_selection: Control = $UI/BuildingSelection
+@onready var building_upgrade_panel: Control = $UI/BuildingUpgradePanel
 
 # 游戏状态
 var current_hero: HeroBase = null
@@ -55,6 +57,15 @@ func _setup_game() -> void:
 
 	# 初始化塔放置系统
 	tower_placement.placeable_area = Rect2i(2, 2, 26, 22)
+	tower_placement.building_placed.connect(_on_building_placed)
+
+	# 建筑选择 UI 信号
+	if building_selection and building_selection.has_signal("building_selected"):
+		building_selection.building_selected.connect(_on_building_selection_made)
+
+	# 城镇升级信号 -> 触发建筑选择
+	if GameManager.has_signal("town_level_up"):
+		GameManager.town_level_up.connect(_on_town_level_up)
 
 	# 生成英雄
 	_spawn_hero()
@@ -167,3 +178,23 @@ func _on_all_waves_completed(stage_id: String) -> void:
 func _update_wave_hud(wave_index: int, label: String) -> void:
 	if hud and hud.has_method("update_wave_info"):
 		hud.update_wave_info(wave_index + 1, label)
+
+
+func _on_building_placed(building: Node, _grid_pos: Variant) -> void:
+	# 注册到 BuildingManager
+	var bm := get_node_or_null("/root/BuildingManager")
+	if bm and bm.has_method("register_building"):
+		bm.register_building(building)
+
+
+func _on_town_level_up(new_level: int) -> void:
+	print("[GameSession] 城镇升级到 Lv.%d! 触发建筑选择" % new_level)
+	# 城镇升级时弹出三选一建筑选择
+	if building_selection and building_selection.has_method("show_selection"):
+		building_selection.show_selection(["arrow_tower", "gold_mine", "barracks"])
+
+
+func _on_building_selection_made(building_id: String) -> void:
+	print("[GameSession] 玩家选择建筑: %s" % building_id)
+	# 选择后进入放置模式
+	tower_placement.start_placement(building_id)
