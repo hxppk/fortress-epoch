@@ -121,6 +121,9 @@ func _attack_single_target() -> void:
 	var atk: float = stats.get_stat("attack")
 	var damage: int = _calculate_and_apply_damage(target, atk)
 
+	# 单体攻击连线特效
+	_spawn_single_vfx(owner_node.global_position, target.global_position)
+
 	hit_count += 1
 	_check_threshold()
 	attack_performed.emit([target], damage)
@@ -143,6 +146,9 @@ func _attack_fan_sweep() -> void:
 	for target: Node2D in hit_targets:
 		var dmg: int = _calculate_and_apply_damage(target, atk)
 		total_damage += dmg
+
+	# 扇形斩击特效
+	_spawn_fan_vfx(center, direction, attack_range)
 
 	hit_count += hit_targets.size()
 	_check_threshold()
@@ -171,6 +177,9 @@ func _attack_aoe_impact() -> void:
 			var dmg: int = _calculate_and_apply_damage(target, total_raw)
 			total_damage += dmg
 			hit_targets.append(target)
+
+	# AOE 圈特效
+	_spawn_aoe_vfx(impact_pos)
 
 	hit_count += hit_targets.size()
 	_check_threshold()
@@ -330,3 +339,145 @@ func _clean_targets() -> void:
 			var target_stats: StatsComponent = target.get_node("StatsComponent")
 			if not target_stats.is_alive():
 				targets_in_range.remove_at(i)
+
+# ============================================================
+# 攻击视觉特效
+# ============================================================
+
+## 扇形斩击弧线特效
+func _spawn_fan_vfx(center: Vector2, direction: Vector2, radius: float) -> void:
+	var vfx := _FanSlashVFX.new()
+	vfx.center = center
+	vfx.direction = direction
+	vfx.radius = radius
+	vfx.angle = fan_angle
+	vfx.z_index = 50
+	var scene_root := owner_node.get_tree().current_scene
+	if scene_root:
+		scene_root.add_child(vfx)
+
+
+## AOE 冲击圈特效
+func _spawn_aoe_vfx(impact_pos: Vector2) -> void:
+	var vfx := _AoeCircleVFX.new()
+	vfx.center = impact_pos
+	vfx.radius = aoe_radius
+	vfx.z_index = 50
+	var scene_root := owner_node.get_tree().current_scene
+	if scene_root:
+		scene_root.add_child(vfx)
+
+
+## 单体攻击连线特效
+func _spawn_single_vfx(from_pos: Vector2, to_pos: Vector2) -> void:
+	var vfx := _SlashLineVFX.new()
+	vfx.from_pos = from_pos
+	vfx.to_pos = to_pos
+	vfx.z_index = 50
+	var scene_root := owner_node.get_tree().current_scene
+	if scene_root:
+		scene_root.add_child(vfx)
+
+
+# ============================================================
+# 内部 VFX 类
+# ============================================================
+
+## 扇形弧线 — 白色半透明扇形快速闪现
+class _FanSlashVFX extends Node2D:
+	var center: Vector2
+	var direction: Vector2
+	var radius: float
+	var angle: float
+	var lifetime: float = 0.2
+	var age: float = 0.0
+
+	func _ready() -> void:
+		global_position = Vector2.ZERO
+
+	func _process(delta: float) -> void:
+		age += delta
+		if age >= lifetime:
+			queue_free()
+			return
+		queue_redraw()
+
+	func _draw() -> void:
+		var alpha: float = 1.0 - (age / lifetime)
+		var color := Color(1.0, 1.0, 1.0, 0.5 * alpha)
+		var outline_color := Color(1.0, 0.9, 0.3, 0.8 * alpha)
+		var half_angle: float = deg_to_rad(angle / 2.0)
+		var base_angle: float = direction.angle()
+		var points: PackedVector2Array = [center]
+		var segments: int = 12
+		for i in range(segments + 1):
+			var t: float = float(i) / float(segments)
+			var a: float = base_angle - half_angle + t * half_angle * 2.0
+			points.append(center + Vector2(cos(a), sin(a)) * radius)
+		# 填充扇形
+		if points.size() >= 3:
+			var colors: PackedColorArray = []
+			for i in range(points.size()):
+				colors.append(color)
+			draw_polygon(points, colors)
+		# 弧线描边
+		for i in range(1, points.size() - 1):
+			draw_line(points[i], points[i + 1], outline_color, 1.5)
+
+
+## AOE 圈 — 橙红色扩散圈
+class _AoeCircleVFX extends Node2D:
+	var center: Vector2
+	var radius: float
+	var lifetime: float = 0.3
+	var age: float = 0.0
+
+	func _ready() -> void:
+		global_position = Vector2.ZERO
+
+	func _process(delta: float) -> void:
+		age += delta
+		if age >= lifetime:
+			queue_free()
+			return
+		queue_redraw()
+
+	func _draw() -> void:
+		var progress: float = age / lifetime
+		var current_radius: float = radius * (0.3 + 0.7 * progress)
+		var alpha: float = 0.6 * (1.0 - progress)
+		var fill_color := Color(1.0, 0.4, 0.1, alpha * 0.4)
+		var ring_color := Color(1.0, 0.6, 0.2, alpha)
+		# 填充圆
+		draw_circle(center, current_radius, fill_color)
+		# 描边圆
+		var segments: int = 24
+		var prev: Vector2 = center + Vector2(current_radius, 0)
+		for i in range(1, segments + 1):
+			var a: float = TAU * float(i) / float(segments)
+			var next: Vector2 = center + Vector2(cos(a), sin(a)) * current_radius
+			draw_line(prev, next, ring_color, 1.5)
+			prev = next
+
+
+## 单体斩线 — 快速白色直线
+class _SlashLineVFX extends Node2D:
+	var from_pos: Vector2
+	var to_pos: Vector2
+	var lifetime: float = 0.15
+	var age: float = 0.0
+
+	func _ready() -> void:
+		global_position = Vector2.ZERO
+
+	func _process(delta: float) -> void:
+		age += delta
+		if age >= lifetime:
+			queue_free()
+			return
+		queue_redraw()
+
+	func _draw() -> void:
+		var alpha: float = 1.0 - (age / lifetime)
+		var color := Color(1.0, 1.0, 1.0, 0.7 * alpha)
+		draw_line(from_pos, to_pos, color, 2.0)
