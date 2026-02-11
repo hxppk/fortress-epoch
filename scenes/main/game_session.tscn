@@ -1,4 +1,4 @@
-[gd_scene load_steps=9 format=3 uid="uid://game_session"]
+[gd_scene load_steps=10 format=3 uid="uid://game_session"]
 
 [ext_resource type="Script" path="res://scripts/core/game_session.gd" id="1_session"]
 [ext_resource type="Script" path="res://scripts/core/wave_spawner.gd" id="2_wave"]
@@ -8,6 +8,7 @@
 [ext_resource type="Script" path="res://scripts/ui/building_selection_ui.gd" id="6_bsel"]
 [ext_resource type="Script" path="res://scripts/ui/building_upgrade_ui.gd" id="7_bupg"]
 [ext_resource type="Script" path="res://scripts/ui/building_interact.gd" id="8_bint"]
+[ext_resource type="PackedScene" uid="uid://card_selection" path="res://scenes/ui/card_selection.tscn" id="9_cardscn"]
 
 [node name="GameSession" type="Node2D"]
 script = ExtResource("1_session")
@@ -170,6 +171,8 @@ grow_vertical = 2
 mouse_filter = 2
 visible = false
 script = ExtResource("7_bupg")
+
+[node name="CardSelection" parent="UI" instance=ExtResource("9_cardscn")]
 
 [node name="BuildingInteract" type="Node" parent="."]
 script = ExtResource("8_bint")

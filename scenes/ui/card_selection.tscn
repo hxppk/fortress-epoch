@@ -1,0 +1,204 @@
+[gd_scene load_steps=4 format=3 uid="uid://card_selection"]
+
+[ext_resource type="Script" path="res://scripts/roguelike/card_selection.gd" id="1_selection"]
+[ext_resource type="Script" path="res://scripts/ui/card_ui.gd" id="2_card_ui"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_card"]
+bg_color = Color(0.12, 0.12, 0.18, 0.95)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.8, 0.8, 0.8, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+content_margin_left = 8.0
+content_margin_top = 6.0
+content_margin_right = 8.0
+content_margin_bottom = 6.0
+
+[node name="CardSelection" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+process_mode = 3
+script = ExtResource("1_selection")
+
+[node name="DimOverlay" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.7)
+
+[node name="VBoxContainer" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -270.0
+offset_top = -200.0
+offset_right = 270.0
+offset_bottom = 200.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 16
+alignment = 1
+
+[node name="Title" type="Label" parent="VBoxContainer"]
+layout_mode = 2
+text = "选择强化"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="CardsContainer" type="HBoxContainer" parent="VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 16
+alignment = 1
+
+[node name="Card1" type="PanelContainer" parent="VBoxContainer/CardsContainer"]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+size_flags_horizontal = 4
+mouse_filter = 0
+theme_override_styles/panel = SubResource("StyleBoxFlat_card")
+script = ExtResource("2_card_ui")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/CardsContainer/Card1"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="RarityBanner" type="ColorRect" parent="VBoxContainer/CardsContainer/Card1/VBoxContainer"]
+custom_minimum_size = Vector2(0, 4)
+layout_mode = 2
+color = Color(0.8, 0.8, 0.8, 1)
+
+[node name="CategoryIcon" type="ColorRect" parent="VBoxContainer/CardsContainer/Card1/VBoxContainer"]
+custom_minimum_size = Vector2(16, 16)
+layout_mode = 2
+size_flags_horizontal = 4
+color = Color(0.7, 0.7, 0.7, 1)
+
+[node name="NameLabel" type="Label" parent="VBoxContainer/CardsContainer/Card1/VBoxContainer"]
+layout_mode = 2
+text = "卡牌名称"
+horizontal_alignment = 1
+
+[node name="HSeparator" type="HSeparator" parent="VBoxContainer/CardsContainer/Card1/VBoxContainer"]
+layout_mode = 2
+
+[node name="DescLabel" type="Label" parent="VBoxContainer/CardsContainer/Card1/VBoxContainer"]
+layout_mode = 2
+text = "效果描述"
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="RarityLabel" type="Label" parent="VBoxContainer/CardsContainer/Card1/VBoxContainer"]
+layout_mode = 2
+text = "普通"
+horizontal_alignment = 1
+
+[node name="SelectButton" type="Button" parent="VBoxContainer/CardsContainer/Card1/VBoxContainer"]
+layout_mode = 2
+text = "选择"
+
+[node name="Card2" type="PanelContainer" parent="VBoxContainer/CardsContainer"]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+size_flags_horizontal = 4
+mouse_filter = 0
+theme_override_styles/panel = SubResource("StyleBoxFlat_card")
+script = ExtResource("2_card_ui")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/CardsContainer/Card2"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="RarityBanner" type="ColorRect" parent="VBoxContainer/CardsContainer/Card2/VBoxContainer"]
+custom_minimum_size = Vector2(0, 4)
+layout_mode = 2
+color = Color(0.8, 0.8, 0.8, 1)
+
+[node name="CategoryIcon" type="ColorRect" parent="VBoxContainer/CardsContainer/Card2/VBoxContainer"]
+custom_minimum_size = Vector2(16, 16)
+layout_mode = 2
+size_flags_horizontal = 4
+color = Color(0.7, 0.7, 0.7, 1)
+
+[node name="NameLabel" type="Label" parent="VBoxContainer/CardsContainer/Card2/VBoxContainer"]
+layout_mode = 2
+text = "卡牌名称"
+horizontal_alignment = 1
+
+[node name="HSeparator" type="HSeparator" parent="VBoxContainer/CardsContainer/Card2/VBoxContainer"]
+layout_mode = 2
+
+[node name="DescLabel" type="Label" parent="VBoxContainer/CardsContainer/Card2/VBoxContainer"]
+layout_mode = 2
+text = "效果描述"
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="RarityLabel" type="Label" parent="VBoxContainer/CardsContainer/Card2/VBoxContainer"]
+layout_mode = 2
+text = "普通"
+horizontal_alignment = 1
+
+[node name="SelectButton" type="Button" parent="VBoxContainer/CardsContainer/Card2/VBoxContainer"]
+layout_mode = 2
+text = "选择"
+
+[node name="Card3" type="PanelContainer" parent="VBoxContainer/CardsContainer"]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+size_flags_horizontal = 4
+mouse_filter = 0
+theme_override_styles/panel = SubResource("StyleBoxFlat_card")
+script = ExtResource("2_card_ui")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/CardsContainer/Card3"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="RarityBanner" type="ColorRect" parent="VBoxContainer/CardsContainer/Card3/VBoxContainer"]
+custom_minimum_size = Vector2(0, 4)
+layout_mode = 2
+color = Color(0.8, 0.8, 0.8, 1)
+
+[node name="CategoryIcon" type="ColorRect" parent="VBoxContainer/CardsContainer/Card3/VBoxContainer"]
+custom_minimum_size = Vector2(16, 16)
+layout_mode = 2
+size_flags_horizontal = 4
+color = Color(0.7, 0.7, 0.7, 1)
+
+[node name="NameLabel" type="Label" parent="VBoxContainer/CardsContainer/Card3/VBoxContainer"]
+layout_mode = 2
+text = "卡牌名称"
+horizontal_alignment = 1
+
+[node name="HSeparator" type="HSeparator" parent="VBoxContainer/CardsContainer/Card3/VBoxContainer"]
+layout_mode = 2
+
+[node name="DescLabel" type="Label" parent="VBoxContainer/CardsContainer/Card3/VBoxContainer"]
+layout_mode = 2
+text = "效果描述"
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="RarityLabel" type="Label" parent="VBoxContainer/CardsContainer/Card3/VBoxContainer"]
+layout_mode = 2
+text = "普通"
+horizontal_alignment = 1
+
+[node name="SelectButton" type="Button" parent="VBoxContainer/CardsContainer/Card3/VBoxContainer"]
+layout_mode = 2
+text = "选择"

@@ -167,9 +167,14 @@ func end_game(victory: bool) -> void:
 # 经验 / 城镇等级
 # ============================================================
 
-## 添加经验，检查是否升级
+## 添加经验，检查是否升级（含卡牌经验加成）
 func add_exp(amount: int) -> void:
-	total_exp += amount
+	var bonus_mult: float = 1.0
+	if has_meta("resource_modifiers"):
+		var mods: Dictionary = get_meta("resource_modifiers")
+		bonus_mult += mods.get("exp_gain_bonus", 0.0)
+	var final_amount: int = maxi(roundi(float(amount) * bonus_mult), 1)
+	total_exp += final_amount
 	_check_town_level_up()
 
 	# 计算下一级阈值用于 UI 显示
@@ -192,14 +197,27 @@ func _check_town_level_up() -> void:
 			break
 
 
-## 计算含加成的击杀金币（联动 BuildingManager）
+## 计算含加成的击杀金币（联动 BuildingManager + 卡牌资源加成）
 func get_kill_gold(base_gold: int) -> int:
 	var bonus: float = 0.0
 	var bm: Node = get_node_or_null("/root/BuildingManager")
 	if bm and bm.has_method("get_kill_gold_bonus"):
 		bonus = bm.get_kill_gold_bonus()
 
+	# 卡牌系统的击杀金币加成
+	if has_meta("resource_modifiers"):
+		var mods: Dictionary = get_meta("resource_modifiers")
+		bonus += mods.get("kill_gold_bonus", 0.0)
+
 	var final_gold: float = float(base_gold) * (1.0 + bonus)
+
+	# 卡牌系统的双倍掉落判定
+	if has_meta("resource_modifiers"):
+		var mods: Dictionary = get_meta("resource_modifiers")
+		var double_chance: float = mods.get("double_loot_chance", 0.0)
+		if double_chance > 0.0 and randf() < double_chance:
+			final_gold *= 2.0
+
 	return roundi(final_gold)
 
 

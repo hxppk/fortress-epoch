@@ -202,6 +202,19 @@ func _execute_wolf_rush() -> void:
 	var atk: float = _stats.get_stat("attack")
 	var rush_damage: float = atk * 2.0
 	var rush_distance: float = 80.0
+	var slow_duration: float = 2.0
+
+	# 应用卡牌特定技能修改
+	var specific_mods: Array = CardEffects.get_specific_skill_modifiers(self, "wolf_rush")
+	for mod: Dictionary in specific_mods:
+		if mod.has("damage_bonus"):
+			rush_damage *= (1.0 + float(mod["damage_bonus"]))
+		if mod.has("slow_duration_bonus"):
+			slow_duration += float(mod["slow_duration_bonus"])
+
+	# 应用卡牌全局范围倍率
+	var range_mult: float = CardEffects.get_skill_range_multiplier(self)
+	rush_distance *= range_mult
 
 	# 计算冲刺方向（面朝方向）
 	var direction: Vector2 = Vector2.RIGHT
@@ -226,7 +239,7 @@ func _execute_wolf_rush() -> void:
 		if not is_instance_valid(enemy):
 			continue
 		_deal_skill_damage(enemy, rush_damage)
-		_apply_slow(enemy, 0.3, 2.0)
+		_apply_slow(enemy, 0.3, slow_duration)
 
 
 ## 狼嚎战吼：AOE 恐惧 + 护盾
@@ -235,6 +248,8 @@ func _execute_wolf_howl() -> void:
 		return
 
 	var howl_radius: float = 64.0
+	# 应用卡牌全局范围倍率
+	howl_radius *= CardEffects.get_skill_range_multiplier(self)
 	var hero_pos: Vector2 = hero.global_position
 
 	# 获取范围内的所有敌人
@@ -304,6 +319,19 @@ func _execute_meteor_shower() -> void:
 	var duration: float = 3.0
 	var tick_interval: float = 0.5
 	var radius: float = 64.0
+	var slow_percent: float = 0.3
+
+	# 应用卡牌特定技能修改
+	var specific_mods: Array = CardEffects.get_specific_skill_modifiers(self, "meteor_shower")
+	for mod: Dictionary in specific_mods:
+		if mod.has("duration_bonus"):
+			duration += float(mod["duration_bonus"])
+		if mod.has("slow_bonus"):
+			slow_percent += float(mod["slow_bonus"])
+
+	# 应用卡牌全局范围倍率
+	var range_mult: float = CardEffects.get_skill_range_multiplier(self)
+	radius *= range_mult
 
 	# 以最近敌人位置为中心（如果没有则以英雄前方为中心）
 	var center: Vector2 = hero.global_position + Vector2(60, 0)
@@ -330,7 +358,7 @@ func _execute_meteor_shower() -> void:
 				if not is_instance_valid(enemy):
 					continue
 				_deal_skill_damage(enemy, tick_damage)
-				_apply_slow(enemy, 0.3, tick_interval + 0.1)
+				_apply_slow(enemy, slow_percent, tick_interval + 0.1)
 
 			if tick_count >= ticks_total:
 				tick_timer.stop()
@@ -356,6 +384,8 @@ func _execute_comet_strike() -> void:
 
 	var start_pos: Vector2 = hero.global_position
 	var projectile_range: float = 120.0
+	# 应用卡牌全局范围倍率
+	projectile_range *= CardEffects.get_skill_range_multiplier(self)
 
 	# 在直线路径上检测敌人
 	var enemies_on_line: Array = _get_enemies_on_path(start_pos, start_pos + direction * projectile_range, 16.0)
@@ -375,6 +405,8 @@ func _execute_celestial_fall() -> void:
 	var spell_power: float = _stats.get_stat("spell_power")
 	var fall_damage: float = spell_power * 10.0
 	var radius: float = float(ultimate_data.get("radius", 128))
+	# 应用卡牌全局范围倍率
+	radius *= CardEffects.get_skill_range_multiplier(self)
 
 	# 以英雄为中心
 	var center: Vector2 = hero.global_position
@@ -400,9 +432,13 @@ func _deal_skill_damage(target: Node2D, raw_damage: float) -> void:
 	if target_stats == null:
 		return
 
-	# 伤害公式：max(raw_damage - defense, 1)
+	# 应用卡牌全局技能伤害倍率
+	var card_damage_mult: float = CardEffects.get_skill_damage_multiplier(self)
+	var modified_damage: float = raw_damage * card_damage_mult
+
+	# 伤害公式：max(modified_damage - defense, 1)
 	var defense: float = target_stats.get_stat("defense")
-	var final_damage: int = maxi(int(raw_damage - defense), 1)
+	var final_damage: int = maxi(int(modified_damage - defense), 1)
 	target_stats.take_damage(float(final_damage))
 
 	# 记录伤害

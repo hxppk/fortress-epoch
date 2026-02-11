@@ -19,6 +19,11 @@ const MeteorMageScene := preload("res://scenes/entities/heroes/meteor_mage.tscn"
 @onready var hud: Control = $UI/HUD
 @onready var building_selection: Control = $UI/BuildingSelection
 @onready var building_upgrade_panel: Control = $UI/BuildingUpgradePanel
+@onready var card_selection: Control = $UI/CardSelection
+
+# 卡牌系统
+var card_pool: CardPool = null
+var card_effects: CardEffects = null
 
 # 游戏状态
 var current_hero: HeroBase = null
@@ -66,6 +71,18 @@ func _setup_game() -> void:
 	# 城镇升级信号 -> 触发建筑选择
 	if GameManager.has_signal("town_level_up"):
 		GameManager.town_level_up.connect(_on_town_level_up)
+
+	# 初始化卡牌系统
+	card_pool = CardPool.new()
+	card_pool.initialize()
+
+	card_effects = CardEffects.new()
+	card_effects.name = "CardEffects"
+	add_child(card_effects)
+
+	# 连接卡牌选择 UI 信号
+	if card_selection and card_selection.has_signal("card_selected"):
+		card_selection.card_selected.connect(_on_card_selected)
 
 	# 生成英雄
 	_spawn_hero()
@@ -189,12 +206,96 @@ func _on_building_placed(building: Node, _grid_pos: Variant) -> void:
 
 func _on_town_level_up(new_level: int) -> void:
 	print("[GameSession] 城镇升级到 Lv.%d! 触发建筑选择" % new_level)
-	# 城镇升级时弹出三选一建筑选择
+	# 城镇升级时先弹出三选一建筑选择
 	if building_selection and building_selection.has_method("show_selection"):
 		building_selection.show_selection(["arrow_tower", "gold_mine", "barracks"])
+		# 等待建筑选择完成后再触发卡牌选择
+		await building_selection.building_selected
+	# 建筑选择完成（或无建筑选择 UI），触发卡牌选择
+	_trigger_card_selection()
 
 
 func _on_building_selection_made(building_id: String) -> void:
 	print("[GameSession] 玩家选择建筑: %s" % building_id)
 	# 选择后进入放置模式
 	tower_placement.start_placement(building_id)
+
+
+# ============================================================
+# 卡牌选择
+# ============================================================
+
+## 触发三选一卡牌选择界面
+func _trigger_card_selection() -> void:
+	if card_pool == null or card_selection == null:
+		print("[GameSession] 卡牌系统未就绪，跳过卡牌选择")
+		return
+
+	if current_hero == null:
+		print("[GameSession] 当前无英雄，跳过卡牌选择")
+		return
+
+	# 获取当前英雄 ID（用于 hero_filter 过滤）
+	var hero_id: String = ""
+	if current_hero.has_method("get") and current_hero.get("hero_id") != null:
+		hero_id = current_hero.hero_id
+	elif current_hero.has_meta("hero_id"):
+		hero_id = current_hero.get_meta("hero_id")
+
+	# 从卡牌池抽取 3 张
+	var current_wave: int = GameManager.current_wave
+	var total_waves: int = wave_spawner.get_total_waves() if wave_spawner.has_method("get_total_waves") else 10
+	var cards: Array = card_pool.draw_three(current_wave, total_waves, hero_id)
+
+	if cards.size() < 3:
+		print("[GameSession] 卡牌池不足 3 张可用卡牌，跳过卡牌选择")
+		return
+
+	# 将 CardData 转换为 Dictionary 以兼容 CardSelectionUI 信号
+	var card_dicts: Array = []
+	for card in cards:
+		if card is CardData:
+			card_dicts.append({
+				"id": card.id,
+				"name": card.card_name,
+				"category": card.category,
+				"rarity": card.rarity,
+				"icon_color": card.icon_color,
+				"source_building": card.source_building,
+				"description": card.description,
+				"effects": card.effects,
+				"hero_filter": card.hero_filter,
+			})
+		else:
+			card_dicts.append(card)
+
+	print("[GameSession] 展示 3 张卡牌: %s" % str(card_dicts.map(func(c): return c.get("name", c.get("id", "?")))))
+
+	# 显示卡牌选择 UI
+	if card_selection.has_method("show_cards"):
+		card_selection.show_cards(card_dicts)
+
+
+## 玩家选择卡牌后的回调
+func _on_card_selected(card_data: Dictionary) -> void:
+	if current_hero == null:
+		push_warning("[GameSession] _on_card_selected: 当前无英雄")
+		return
+
+	var card_name: String = card_data.get("name", card_data.get("id", "unknown"))
+	print("[GameSession] 玩家选择卡牌: %s (%s)" % [card_name, card_data.get("category", "?")])
+
+	# 应用卡牌效果
+	if card_effects:
+		card_effects.apply_card(card_data, current_hero)
+
+	# 记录选择（防止重复抽取）
+	if card_pool:
+		# 找到对应的 CardData 实例进行记录
+		var card_id: String = card_data.get("id", "")
+		for card in card_pool.all_cards:
+			if card.id == card_id:
+				card_pool.record_selection(card)
+				break
+
+	print("[GameSession] 卡牌 %s 效果已应用" % card_name)
