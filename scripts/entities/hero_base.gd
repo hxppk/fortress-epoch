@@ -361,12 +361,9 @@ func _deal_damage_to(target: Node2D, raw_damage: float) -> void:
 		final_damage = final_damage * (100.0 / (100.0 + defense))
 		target_stats.take_damage(final_damage)
 
-	# 记录伤害到 GameManager（如果存在）
-	var game_manager: Node = Engine.get_singleton("GameManager") if Engine.has_singleton("GameManager") else null
-	if game_manager == null and has_node("/root/GameManager"):
-		game_manager = get_node("/root/GameManager")
-	if game_manager and game_manager.has_method("record_damage"):
-		game_manager.record_damage(final_damage)
+	# 记录伤害到 GameManager
+	if GameManager.has_method("record_damage"):
+		GameManager.record_damage(final_damage)
 
 
 ## 应用阈值效果

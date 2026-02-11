@@ -278,10 +278,8 @@ func _calculate_and_apply_damage(target: Node2D, raw_atk: float) -> int:
 	if target_stats == null:
 		return 0
 
-	# 尝试使用 DamageSystem Autoload
-	var damage_system: Node = null
-	if owner_node and owner_node.is_inside_tree():
-		damage_system = owner_node.get_tree().root.get_node_or_null("DamageSystem")
+	# 使用 DamageSystem Autoload
+	var damage_system: Node = DamageSystem
 
 	if damage_system and damage_system.has_method("calculate_damage"):
 		var damage_info: Dictionary = damage_system.calculate_damage(stats, target_stats)

@@ -404,9 +404,8 @@ func _on_main_menu_requested() -> void:
 
 func _on_building_placed(building: Node, _grid_pos: Variant) -> void:
 	# 注册到 BuildingManager
-	var bm := get_node_or_null("/root/BuildingManager")
-	if bm and bm.has_method("register_building"):
-		bm.register_building(building)
+	if BuildingManager and BuildingManager.has_method("register_building"):
+		BuildingManager.register_building(building)
 
 
 func _on_town_level_up(new_level: int) -> void:

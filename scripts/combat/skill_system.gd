@@ -446,10 +446,8 @@ func _deal_skill_damage(target: Node2D, raw_damage: float) -> void:
 	if gm and gm.has_method("record_damage"):
 		gm.record_damage(float(final_damage))
 
-	# 飘字：尝试使用 DamageSystem
-	var damage_system: Node = null
-	if hero.is_inside_tree():
-		damage_system = hero.get_tree().root.get_node_or_null("DamageSystem")
+	# 飘字：使用 DamageSystem
+	var damage_system: Node = DamageSystem
 	if damage_system and damage_system.has_method("create_damage_number"):
 		damage_system.create_damage_number(target.global_position, final_damage, false)
 
@@ -552,9 +550,7 @@ func _on_kill_recorded(_total_kills: int) -> void:
 
 ## 获取 GameManager 引用
 func _get_game_manager() -> Node:
-	if hero and hero.is_inside_tree():
-		return hero.get_tree().root.get_node_or_null("GameManager")
-	return null
+	return GameManager
 
 
 ## 获取最近的敌人（遍历场景树中 "enemies" 组）

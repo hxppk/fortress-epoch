@@ -1,4 +1,3 @@
-class_name GameManager
 extends Node
 ## GameManager — 全局游戏状态管理（Autoload 单例）
 ## 管理游戏状态机、共享血池、资源、击杀/伤害统计。
@@ -222,9 +221,8 @@ func _check_town_level_up() -> void:
 ## 计算含加成的击杀金币（联动 BuildingManager + 卡牌资源加成）
 func get_kill_gold(base_gold: int) -> int:
 	var bonus: float = 0.0
-	var bm: Node = get_node_or_null("/root/BuildingManager")
-	if bm and bm.has_method("get_kill_gold_bonus"):
-		bonus = bm.get_kill_gold_bonus()
+	if BuildingManager and BuildingManager.has_method("get_kill_gold_bonus"):
+		bonus = BuildingManager.get_kill_gold_bonus()
 
 	# 卡牌系统的击杀金币加成
 	if has_meta("resource_modifiers"):

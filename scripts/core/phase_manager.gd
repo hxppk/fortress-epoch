@@ -373,6 +373,4 @@ func _is_next_wave_boss() -> bool:
 
 ## 获取 GameManager 引用
 func _get_game_manager() -> Node:
-	if is_inside_tree():
-		return get_tree().root.get_node_or_null("GameManager")
-	return null
+	return GameManager

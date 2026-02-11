@@ -1,4 +1,3 @@
-class_name BuildingManager
 extends Node
 ## BuildingManager — 全局建筑管理器（Autoload 单例）
 ## 管理所有建筑实例、统一处理升级事件、维护击杀金币加成。

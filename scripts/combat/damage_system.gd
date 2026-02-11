@@ -1,4 +1,3 @@
-class_name DamageSystem
 extends Node
 ## DamageSystem — 伤害计算 + 飘字（Autoload 单例）
 ## 公式：damage = max(ATK - DEF, 1)，暴击 x2
@@ -34,13 +33,9 @@ func apply_damage(attacker: Node2D, defender: Node2D, damage_info: Dictionary) -
 
 	var actual_damage: float = defender_stats.take_damage(float(damage_info["damage"]))
 
-	# 记录伤害到 GameManager（如果存在）
-	var gm: Node = Engine.get_singleton("GameManager") if Engine.has_singleton("GameManager") else null
-	if gm == null:
-		# Autoload 节点在场景树中查找
-		gm = defender.get_tree().root.get_node_or_null("GameManager")
-	if gm and gm.has_method("record_damage"):
-		gm.record_damage(actual_damage)
+	# 记录伤害到 GameManager
+	if GameManager.has_method("record_damage"):
+		GameManager.record_damage(actual_damage)
 
 	# 击杀统计由 EnemyBase.die() 负责，此处不再重复调用
 
@@ -48,20 +43,16 @@ func apply_damage(attacker: Node2D, defender: Node2D, damage_info: Dictionary) -
 	create_damage_number(defender.global_position, damage_info["damage"], damage_info["is_crit"])
 
 	# 闪白 & 缩放反馈
-	var feedback: Node = Engine.get_singleton("CombatFeedback") if Engine.has_singleton("CombatFeedback") else null
-	if feedback == null:
-		feedback = defender.get_tree().root.get_node_or_null("CombatFeedback")
-
-	if feedback:
+	if CombatFeedback:
 		# 被击者闪白
 		var defender_sprite: Node2D = _find_sprite(defender)
-		if defender_sprite and feedback.has_method("flash_white"):
-			feedback.flash_white(defender_sprite)
+		if defender_sprite and CombatFeedback.has_method("flash_white"):
+			CombatFeedback.flash_white(defender_sprite)
 
 		# 攻击者缩放弹性效果
 		var attacker_sprite: Node2D = _find_sprite(attacker)
-		if attacker_sprite and feedback.has_method("hit_scale_effect"):
-			feedback.hit_scale_effect(attacker_sprite)
+		if attacker_sprite and CombatFeedback.has_method("hit_scale_effect"):
+			CombatFeedback.hit_scale_effect(attacker_sprite)
 
 # ============================================================
 # 飘字

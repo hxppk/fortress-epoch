@@ -36,9 +36,10 @@ func _ready() -> void:
 
 ## 显示副本选择界面（传入可用副本列表）
 func show_selection(expeditions: Array) -> void:
-	# 清空旧按钮
+	# 清空旧的动态按钮（跳过静态场景节点如 SelectTitle）
 	for child in selection_panel.get_children():
-		child.queue_free()
+		if child is Button:
+			child.queue_free()
 
 	# 为每个副本创建选择按钮
 	for exp_data: Dictionary in expeditions:

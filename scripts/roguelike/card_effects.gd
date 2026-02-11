@@ -318,7 +318,8 @@ static func get_specific_skill_modifiers(skill_sys: SkillSystem, skill_id: Strin
 
 ## 获取资源修改器值（从 GameManager meta 读取）
 static func get_resource_modifier(modifier_name: String) -> float:
-	var gm: Node = Engine.get_main_loop().root.get_node_or_null("GameManager") if Engine.get_main_loop() else null
+	var tree: SceneTree = Engine.get_main_loop() as SceneTree
+	var gm: Node = tree.root.get_node_or_null("GameManager") if tree else null
 	if gm == null:
 		return 0.0
 	if not gm.has_meta("resource_modifiers"):
@@ -351,6 +352,4 @@ func _get_skill_system(hero: Node) -> SkillSystem:
 
 ## 获取 GameManager 单例
 func _get_game_manager() -> Node:
-	if is_inside_tree():
-		return get_tree().root.get_node_or_null("GameManager")
-	return null
+	return GameManager

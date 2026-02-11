@@ -115,10 +115,10 @@ func _populate_card(card: Control, building_id: String) -> void:
 	var stats_label: Label = vbox.get_node("StatsLabel")
 	stats_label.text = _format_stats(info)
 
-	# 选择按钮 — 先断开旧连接再绑定新的
+	# 选择按钮 — 先断开所有旧连接再绑定新的
 	var btn: Button = vbox.get_node("SelectButton")
-	if btn.pressed.is_connected(_on_card_selected):
-		btn.pressed.disconnect(_on_card_selected)
+	for conn: Dictionary in btn.pressed.get_connections():
+		btn.pressed.disconnect(conn["callable"])
 	btn.pressed.connect(_on_card_selected.bind(building_id))
 	btn.text = "选择"
 

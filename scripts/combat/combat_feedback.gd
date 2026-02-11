@@ -1,4 +1,3 @@
-class_name CombatFeedback
 extends Node
 ## CombatFeedback — 战斗视觉反馈（闪白、屏幕震动、击杀粒子、弹性缩放）
 ## 可作为 Autoload 使用，也可挂载到场景中。

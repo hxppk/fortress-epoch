@@ -12,10 +12,11 @@ extends Control
 @onready var skill1_bar: ProgressBar = $BottomBar/Skill1Bar
 @onready var skill2_bar: ProgressBar = $BottomBar/Skill2Bar
 @onready var ultimate_bar: ProgressBar = $BottomBar/UltimateBar
-@onready var build_buttons: HBoxContainer = $BottomBar/BuildButtons if has_node("BottomBar/BuildButtons") else null
+var build_buttons: HBoxContainer = null
 
 
 func _ready() -> void:
+	build_buttons = get_node_or_null("BottomBar/BuildButtons") as HBoxContainer
 	GameManager.resource_changed.connect(_on_resource_changed)
 	GameManager.shared_hp_changed.connect(_on_hp_changed)
 	GameManager.game_over.connect(_on_game_over)

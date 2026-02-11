@@ -455,6 +455,4 @@ func _get_next_route(entry: Dictionary, routes: Array) -> String:
 
 ## 获取 GameManager 引用
 func _get_game_manager() -> Node:
-	if is_inside_tree():
-		return get_tree().root.get_node_or_null("GameManager")
-	return null
+	return GameManager
