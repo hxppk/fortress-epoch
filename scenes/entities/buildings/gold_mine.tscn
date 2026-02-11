@@ -1,0 +1,39 @@
+[gd_scene load_steps=4 format=3 uid="uid://d1gold_mine"]
+
+[ext_resource type="Script" path="res://scripts/building/building_base.gd" id="1_script"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_body"]
+size = Vector2(14, 14)
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_attack"]
+radius = 96.0
+
+[node name="GoldMine" type="StaticBody2D"]
+collision_layer = 4
+collision_mask = 2
+script = ExtResource("1_script")
+building_id = "gold_mine"
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("RectangleShape2D_body")
+
+[node name="AttackArea" type="Area2D" parent="."]
+collision_layer = 0
+collision_mask = 2
+monitoring = false
+monitorable = false
+
+[node name="AttackRange" type="CollisionShape2D" parent="AttackArea"]
+disabled = true
+shape = SubResource("CircleShape2D_attack")
+
+[node name="Label" type="Label" parent="."]
+offset_left = -12.0
+offset_top = -20.0
+offset_right = 12.0
+offset_bottom = -6.0
+horizontal_alignment = 1
+vertical_alignment = 1
+text = "Lv1"

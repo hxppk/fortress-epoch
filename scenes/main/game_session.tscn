@@ -1,8 +1,24 @@
-[gd_scene format=3 uid="uid://game_session"]
+[gd_scene load_steps=6 format=3 uid="uid://game_session"]
+
+[ext_resource type="Script" path="res://scripts/core/game_session.gd" id="1_session"]
+[ext_resource type="Script" path="res://scripts/core/wave_spawner.gd" id="2_wave"]
+[ext_resource type="Script" path="res://scripts/entities/enemy_pool.gd" id="3_pool"]
+[ext_resource type="Script" path="res://scripts/building/tower_placement.gd" id="4_placement"]
+[ext_resource type="Script" path="res://scripts/ui/hud.gd" id="5_hud"]
 
 [node name="GameSession" type="Node2D"]
+script = ExtResource("1_session")
 
 [node name="Map" type="Node2D" parent="."]
+
+[node name="FortressCore" type="Marker2D" parent="Map"]
+position = Vector2(240, 200)
+
+[node name="SpawnNorth" type="Marker2D" parent="Map"]
+position = Vector2(240, -20)
+
+[node name="SpawnEast" type="Marker2D" parent="Map"]
+position = Vector2(500, 150)
 
 [node name="Entities" type="Node2D" parent="."]
 
@@ -14,7 +30,93 @@
 
 [node name="Projectiles" type="Node2D" parent="Entities"]
 
+[node name="WaveSpawner" type="Node" parent="."]
+script = ExtResource("2_wave")
+
+[node name="EnemyPool" type="Node" parent="."]
+script = ExtResource("3_pool")
+
+[node name="TowerPlacement" type="Node2D" parent="."]
+script = ExtResource("4_placement")
+
 [node name="UI" type="CanvasLayer" parent="."]
+
+[node name="HUD" type="Control" parent="UI"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("5_hud")
+
+[node name="TopBar" type="HBoxContainer" parent="UI/HUD"]
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 30.0
+grow_horizontal = 2
+theme_override_constants/separation = 20
+
+[node name="GoldLabel" type="Label" parent="UI/HUD/TopBar"]
+layout_mode = 2
+text = "Gold: 100"
+
+[node name="CrystalLabel" type="Label" parent="UI/HUD/TopBar"]
+layout_mode = 2
+text = "Crystal: 0"
+
+[node name="HPBar" type="ProgressBar" parent="UI/HUD/TopBar"]
+layout_mode = 2
+custom_minimum_size = Vector2(120, 0)
+max_value = 60.0
+value = 60.0
+show_percentage = false
+
+[node name="HPLabel" type="Label" parent="UI/HUD/TopBar/HPBar"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+text = "60 / 60"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="WaveLabel" type="Label" parent="UI/HUD/TopBar"]
+layout_mode = 2
+text = "Wave: --"
+
+[node name="BottomBar" type="HBoxContainer" parent="UI/HUD"]
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -40.0
+grow_horizontal = 2
+grow_vertical = 0
+alignment = 1
+theme_override_constants/separation = 10
+
+[node name="Skill1Bar" type="ProgressBar" parent="UI/HUD/BottomBar"]
+layout_mode = 2
+custom_minimum_size = Vector2(60, 20)
+max_value = 10.0
+value = 10.0
+show_percentage = false
+
+[node name="Skill2Bar" type="ProgressBar" parent="UI/HUD/BottomBar"]
+layout_mode = 2
+custom_minimum_size = Vector2(60, 20)
+max_value = 15.0
+value = 15.0
+show_percentage = false
+
+[node name="UltimateBar" type="ProgressBar" parent="UI/HUD/BottomBar"]
+layout_mode = 2
+custom_minimum_size = Vector2(80, 20)
+max_value = 50.0
+value = 0.0
+show_percentage = false
 
 [node name="Camera2D" type="Camera2D" parent="."]
 zoom = Vector2(2, 2)
