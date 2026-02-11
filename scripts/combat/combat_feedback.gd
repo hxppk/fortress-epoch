@@ -95,8 +95,8 @@ func hit_scale_effect(sprite: Node2D) -> void:
 
 	var original_scale: Vector2 = sprite.scale
 	var tween := sprite.create_tween()
-	tween.tween_property(sprite, "scale", original_scale * 1.3, 0.05).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
-	tween.tween_property(sprite, "scale", original_scale, 0.1).set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_BACK)
+	tween.tween_property(sprite, "scale", original_scale * 1.8, 0.06).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
+	tween.tween_property(sprite, "scale", original_scale, 0.12).set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_BACK)
 
 # ============================================================
 # 内部工具

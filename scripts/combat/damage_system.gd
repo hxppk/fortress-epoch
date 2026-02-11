@@ -67,15 +67,15 @@ func create_damage_number(position: Vector2, amount: int, is_crit: bool) -> void
 
 	# 外观
 	if is_crit:
-		label.add_theme_font_size_override("font_size", 18)
+		label.add_theme_font_size_override("font_size", 28)
 		label.add_theme_color_override("font_color", Color.YELLOW)
 	else:
-		label.add_theme_font_size_override("font_size", 12)
+		label.add_theme_font_size_override("font_size", 20)
 		label.add_theme_color_override("font_color", Color.WHITE)
 
 	label.add_theme_color_override("font_shadow_color", Color.BLACK)
-	label.add_theme_constant_override("shadow_offset_x", 1)
-	label.add_theme_constant_override("shadow_offset_y", 1)
+	label.add_theme_constant_override("shadow_offset_x", 2)
+	label.add_theme_constant_override("shadow_offset_y", 2)
 
 	# 添加到场景树
 	var tree := get_tree()

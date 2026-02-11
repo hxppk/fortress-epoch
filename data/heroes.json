@@ -11,7 +11,7 @@
         "defense": 15,
         "speed": 100,
         "attack_speed": 1.0,
-        "attack_range": 40,
+        "attack_range": 80,
         "crit_rate": 0.10,
         "spell_power": 5
       },
