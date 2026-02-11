@@ -251,6 +251,9 @@ func _spawn_enemy(type: String, route: String) -> void:
 		enemy = enemy_pool.get_enemy(type)
 		if enemy:
 			enemy.global_position = spawn_pos
+			# 激活敌人（设置 is_active, visible, move_target）
+			if enemy.has_method("activate"):
+				enemy.activate(spawn_pos, fortress_position)
 
 	# 对象池没有则实例化场景
 	if enemy == null:
@@ -272,6 +275,13 @@ func _spawn_enemy(type: String, route: String) -> void:
 			get_tree().current_scene.add_child(enemy)
 		else:
 			add_child(enemy)
+
+		# 添加到场景树后激活
+		if enemy.has_method("activate"):
+			enemy.activate(spawn_pos, fortress_position)
+		elif "is_active" in enemy:
+			enemy.is_active = true
+			enemy.visible = true
 
 	# 加入 enemies 分组
 	if not enemy.is_in_group("enemies"):
@@ -313,9 +323,9 @@ func _on_enemy_stats_died(enemy: Node2D) -> void:
 func _on_enemy_died(enemy: Node2D) -> void:
 	active_enemies = maxi(active_enemies - 1, 0)
 
-	# 归还对象池
-	if enemy_pool and enemy_pool.has_method("return_enemy"):
-		enemy_pool.return_enemy(enemy)
+	# 归还对象池（类型安全检查）
+	if enemy_pool and enemy_pool.has_method("return_enemy") and enemy is EnemyBase:
+		enemy_pool.return_enemy(enemy as EnemyBase)
 
 	_check_wave_complete()
 

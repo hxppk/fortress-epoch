@@ -79,9 +79,10 @@ func _ready() -> void:
 	if enemy_id != "":
 		_load_data_from_json()
 
-	# NavigationAgent2D 设置
-	nav_agent.path_desired_distance = 4.0
-	nav_agent.target_desired_distance = 4.0
+	# NavigationAgent2D 设置（可选，nav_agent 可能为 null）
+	if nav_agent:
+		nav_agent.path_desired_distance = 4.0
+		nav_agent.target_desired_distance = 4.0
 
 
 func _physics_process(delta: float) -> void:
@@ -149,8 +150,9 @@ func activate(pos: Vector2, target_pos: Vector2) -> void:
 	for i in range(_enrage_thresholds_triggered.size()):
 		_enrage_thresholds_triggered[i] = false
 
-	# 设置导航目标
-	nav_agent.target_position = target_pos
+	# 设置导航目标（可选，nav_agent 可能为 null）
+	if nav_agent:
+		nav_agent.target_position = target_pos
 
 	# 重新初始化 stats
 	if enemy_data.has("stats"):
@@ -212,19 +214,13 @@ func _execute_behavior(delta: float) -> void:
 func _move_toward_target(delta: float) -> void:
 	var speed: float = stats.get_stat("speed")
 
-	# 检查是否到达目标
 	var distance_to_target: float = global_position.distance_to(move_target)
 	if distance_to_target <= ARRIVAL_DISTANCE:
 		_on_reached_target()
 		return
 
-	# 使用 NavigationAgent2D 获取下一路径点
-	if nav_agent.is_navigation_finished():
-		nav_agent.target_position = move_target
-
-	var next_point: Vector2 = nav_agent.get_next_path_position()
-	var direction: Vector2 = (next_point - global_position).normalized()
-
+	# 直接朝目标移动（不依赖 NavigationAgent2D）
+	var direction: Vector2 = (move_target - global_position).normalized()
 	velocity = direction * speed
 
 # ============================================================
