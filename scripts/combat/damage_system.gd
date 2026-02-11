@@ -42,10 +42,7 @@ func apply_damage(attacker: Node2D, defender: Node2D, damage_info: Dictionary) -
 	if gm and gm.has_method("record_damage"):
 		gm.record_damage(actual_damage)
 
-	# 击杀统计
-	if not defender_stats.is_alive():
-		if gm and gm.has_method("record_kill"):
-			gm.record_kill()
+	# 击杀统计由 EnemyBase.die() 负责，此处不再重复调用
 
 	# 飘字
 	create_damage_number(defender.global_position, damage_info["damage"], damage_info["is_crit"])

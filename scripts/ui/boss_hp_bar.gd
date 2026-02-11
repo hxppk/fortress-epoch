@@ -91,9 +91,9 @@ func _on_boss_died() -> void:
 func _get_boss_name(boss: Node2D) -> String:
 	if boss.has_meta("display_name"):
 		return boss.get_meta("display_name")
-	if "enemy_type" in boss:
-		match boss.enemy_type:
+	if "enemy_id" in boss:
+		match boss.enemy_id:
 			"demon_boss": return "恶魔领主"
 			"orc_elite": return "兽人精英"
-			_: return boss.enemy_type
+			_: return boss.enemy_id
 	return "BOSS"

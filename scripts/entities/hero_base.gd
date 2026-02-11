@@ -235,6 +235,11 @@ func _process_auto_attack(delta: float) -> void:
 	if hero_data.is_empty():
 		return
 
+	# 如果有 AutoAttackComponent 子节点，由它负责攻击，跳过内置逻辑
+	for child in get_children():
+		if child is AutoAttackComponent:
+			return
+
 	var attack_speed: float = stats.get_stat("attack_speed")
 	if attack_speed <= 0.0:
 		return

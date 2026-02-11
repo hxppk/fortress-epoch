@@ -441,15 +441,10 @@ func _deal_skill_damage(target: Node2D, raw_damage: float) -> void:
 	var final_damage: int = maxi(int(modified_damage - defense), 1)
 	target_stats.take_damage(float(final_damage))
 
-	# 记录伤害
+	# 记录伤害（击杀统计由 EnemyBase.die() 负责）
 	var gm: Node = _get_game_manager()
 	if gm and gm.has_method("record_damage"):
 		gm.record_damage(float(final_damage))
-
-	# 检查击杀
-	if not target_stats.is_alive():
-		if gm and gm.has_method("record_kill"):
-			gm.record_kill()
 
 	# 飘字：尝试使用 DamageSystem
 	var damage_system: Node = null

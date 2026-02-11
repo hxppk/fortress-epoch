@@ -361,7 +361,7 @@ func _on_support_used(remaining: int) -> void:
 
 func _on_enemy_spawned_for_boss(enemy: Node2D) -> void:
 	# 检查是否是 BOSS
-	if "enemy_type" in enemy and enemy.enemy_type == "demon_boss":
+	if "enemy_id" in enemy and enemy.enemy_id == "demon_boss":
 		if boss_hp_bar and boss_hp_bar.has_method("bind_boss"):
 			boss_hp_bar.bind_boss(enemy)
 		# 绑定后断开，避免重复
