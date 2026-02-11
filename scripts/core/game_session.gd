@@ -1,12 +1,13 @@
 extends Node2D
 ## 游戏会话顶层控制器
-## 管理英雄生成、波次流程、建筑放置、输入分发
+## 管理英雄生成、阶段流程、建筑放置、出征、输入分发
+## Phase 4: 由 PhaseManager 驱动完整流程
 
 # 场景预加载
 const WolfKnightScene := preload("res://scenes/entities/heroes/wolf_knight.tscn")
 const MeteorMageScene := preload("res://scenes/entities/heroes/meteor_mage.tscn")
 
-# 节点引用
+# 节点引用 — 基础系统
 @onready var map: Node2D = $Map
 @onready var heroes_node: Node2D = $Entities/Heroes
 @onready var enemies_node: Node2D = $Entities/Enemies
@@ -16,10 +17,19 @@ const MeteorMageScene := preload("res://scenes/entities/heroes/meteor_mage.tscn"
 @onready var wave_spawner: WaveSpawner = $WaveSpawner
 @onready var enemy_pool: EnemyPool = $EnemyPool
 @onready var tower_placement: TowerPlacement = $TowerPlacement
+@onready var phase_manager: PhaseManager = $PhaseManager
+@onready var expedition_manager: ExpeditionManager = $ExpeditionManager
+
+# 节点引用 — UI
 @onready var hud: Control = $UI/HUD
 @onready var building_selection: Control = $UI/BuildingSelection
 @onready var building_upgrade_panel: Control = $UI/BuildingUpgradePanel
 @onready var card_selection: Control = $UI/CardSelection
+@onready var wave_preview: Control = $UI/WavePreview
+@onready var boss_hp_bar: Control = $UI/BossHPBar
+@onready var minimap: Control = $UI/Minimap
+@onready var expedition_panel: Control = $UI/ExpeditionPanel
+@onready var result_screen: Control = $UI/ResultScreen
 
 # 卡牌系统
 var card_pool: CardPool = null
@@ -68,9 +78,12 @@ func _setup_game() -> void:
 	if building_selection and building_selection.has_signal("building_selected"):
 		building_selection.building_selected.connect(_on_building_selection_made)
 
-	# 城镇升级信号 -> 触发建筑选择
+	# 城镇升级信号 -> 标记待选卡牌
 	if GameManager.has_signal("town_level_up"):
 		GameManager.town_level_up.connect(_on_town_level_up)
+
+	# 游戏结束信号 -> 结算屏幕
+	GameManager.game_over.connect(_on_game_over)
 
 	# 初始化卡牌系统
 	card_pool = CardPool.new()
@@ -84,15 +97,39 @@ func _setup_game() -> void:
 	if card_selection and card_selection.has_signal("card_selected"):
 		card_selection.card_selected.connect(_on_card_selected)
 
+	# 初始化 PhaseManager
+	phase_manager.initialize(wave_spawner)
+	phase_manager.phase_changed.connect(_on_phase_changed)
+	phase_manager.tutorial_message.connect(_on_tutorial_message)
+	phase_manager.transition_tick.connect(_on_transition_tick)
+	phase_manager.transition_ended.connect(_on_transition_ended)
+
+	# 初始化出征系统
+	expedition_manager.initialize()
+	expedition_manager.expedition_started.connect(_on_expedition_started)
+	expedition_manager.expedition_progress.connect(_on_expedition_progress)
+	expedition_manager.expedition_completed.connect(_on_expedition_completed)
+	expedition_manager.support_used.connect(_on_support_used)
+
+	# 出征 UI 信号
+	if expedition_panel:
+		if expedition_panel.has_signal("expedition_selected"):
+			expedition_panel.expedition_selected.connect(_on_expedition_selected)
+		if expedition_panel.has_signal("support_requested"):
+			expedition_panel.support_requested.connect(_on_support_requested)
+
+	# 结算屏幕信号
+	if result_screen:
+		if result_screen.has_signal("restart_requested"):
+			result_screen.restart_requested.connect(_on_restart_requested)
+		if result_screen.has_signal("main_menu_requested"):
+			result_screen.main_menu_requested.connect(_on_main_menu_requested)
+
 	# 生成英雄
 	_spawn_hero()
 
-	# 加载第一阶段
-	wave_spawner.load_stage("stage_1_tutorial")
-
-	# 延迟启动第一波
-	await get_tree().create_timer(1.0).timeout
-	wave_spawner.start_next_wave()
+	# 通过 PhaseManager 启动游戏流程
+	phase_manager.start_game_flow()
 
 
 func _spawn_hero() -> void:
@@ -126,9 +163,10 @@ func _spawn_hero() -> void:
 
 
 func _process(_delta: float) -> void:
-	if GameManager.game_state != "playing":
-		return
-	_handle_input()
+	# 允许在多种活跃状态下处理输入
+	var state: String = GameManager.game_state
+	if state in ["playing", "boss", "expedition", "transition"]:
+		_handle_input()
 
 
 func _handle_input() -> void:
@@ -168,34 +206,201 @@ func _handle_input() -> void:
 		tower_placement.start_placement("barracks")
 
 
+# ============================================================
+# PhaseManager 回调
+# ============================================================
+
+func _on_phase_changed(phase_name: String, _phase_data: Dictionary) -> void:
+	print("[GameSession] 阶段切换: %s" % phase_name)
+
+	match phase_name:
+		"transition":
+			# 显示出征选择界面
+			if expedition_panel and expedition_panel.has_method("show_selection"):
+				expedition_panel.show_selection(expedition_manager.get_available_expeditions())
+		"card_selection":
+			# 先弹建筑选择，完成后再弹卡牌选择
+			_handle_card_selection_phase()
+		"boss":
+			# 监听敌人生成，绑定 BOSS 血条
+			if not wave_spawner.enemy_spawned.is_connected(_on_enemy_spawned_for_boss):
+				wave_spawner.enemy_spawned.connect(_on_enemy_spawned_for_boss)
+
+
+## 卡牌选择阶段：先建筑选择 -> 再卡牌选择
+func _handle_card_selection_phase() -> void:
+	# 城镇升级时先弹出三选一建筑选择
+	if building_selection and building_selection.has_method("show_selection"):
+		building_selection.show_selection(["arrow_tower", "gold_mine", "barracks"])
+		# 等待建筑选择完成后再触发卡牌选择
+		await building_selection.building_selected
+	# 建筑选择完成，触发卡牌选择
+	_trigger_card_selection()
+
+
+func _on_tutorial_message(text: String) -> void:
+	print("[GameSession] 引导提示: %s" % text)
+	# 复用 HUD 的波次信息显示引导文字
+	if hud and hud.has_method("update_wave_info"):
+		hud.update_wave_info(0, text)
+
+
+func _on_transition_tick(remaining: float) -> void:
+	# 更新 HUD 中的倒计时显示
+	if hud and hud.has_method("update_wave_info"):
+		hud.update_wave_info(0, "出征准备 %.0fs" % maxf(remaining, 0))
+
+
+func _on_transition_ended() -> void:
+	print("[GameSession] 过渡倒计时结束")
+
+
+# ============================================================
+# WaveSpawner 回调（委托给 PhaseManager）
+# ============================================================
+
 func _on_wave_started(wave_index: int, wave_label: String) -> void:
 	print("[GameSession] 波次 %d 开始: %s" % [wave_index + 1, wave_label])
 	_update_wave_hud(wave_index, wave_label)
 
+	# 显示波次预告
+	if wave_preview and wave_preview.has_method("show_preview"):
+		var waves: Array = wave_spawner.current_stage_data.get("waves", [])
+		if wave_index < waves.size():
+			wave_preview.show_preview(waves[wave_index])
+
 
 func _on_wave_completed(wave_index: int, rewards: Dictionary) -> void:
 	print("[GameSession] 波次 %d 完成! 奖励: %s" % [wave_index + 1, str(rewards)])
-	GameManager.game_state = "wave_clear"
-
-	# 波间休息 3 秒
-	await get_tree().create_timer(3.0).timeout
-
-	if not wave_spawner.is_all_waves_complete():
-		GameManager.game_state = "playing"
-		wave_spawner.start_next_wave()
-	else:
-		_on_all_waves_completed(wave_spawner.current_stage_data.get("id", ""))
+	# 委托给 PhaseManager 处理流程路由
+	phase_manager.on_wave_completed(wave_index, rewards)
 
 
 func _on_all_waves_completed(stage_id: String) -> void:
 	print("[GameSession] 阶段 %s 全部完成!" % stage_id)
-	GameManager.end_game(true)
+	phase_manager.on_all_waves_completed(stage_id)
 
 
 func _update_wave_hud(wave_index: int, label: String) -> void:
 	if hud and hud.has_method("update_wave_info"):
 		hud.update_wave_info(wave_index + 1, label)
 
+
+# ============================================================
+# 出征系统回调
+# ============================================================
+
+func _on_expedition_selected(expedition_id: String) -> void:
+	if expedition_id == "":
+		# 跳过出征
+		print("[GameSession] 玩家选择跳过出征")
+		if expedition_panel:
+			expedition_panel.hide_panel()
+		phase_manager.on_expedition_completed()
+		return
+
+	print("[GameSession] 玩家选择出征: %s" % expedition_id)
+
+	# 获取英雄属性快照
+	var hero_stats: Dictionary = {}
+	if current_hero and current_hero.has_node("StatsComponent"):
+		var stats: StatsComponent = current_hero.get_node("StatsComponent")
+		hero_stats = {
+			"attack": int(stats.get_stat("attack")),
+			"defense": int(stats.get_stat("defense")),
+			"hp": int(stats.get_stat("hp")),
+			"speed": int(stats.get_stat("speed")),
+		}
+
+	expedition_manager.start_expedition(expedition_id, hero_stats)
+
+
+func _on_expedition_started(expedition_id: String) -> void:
+	print("[GameSession] 出征开始: %s" % expedition_id)
+	# 切换 UI 到进度显示
+	var exp_name: String = ""
+	for ed: Dictionary in expedition_manager.all_expeditions:
+		if ed.get("id", "") == expedition_id:
+			exp_name = ed.get("name", "出征中")
+			break
+	if expedition_panel and expedition_panel.has_method("show_progress"):
+		expedition_panel.show_progress(exp_name)
+
+
+func _on_expedition_progress(message: String, progress: float) -> void:
+	if expedition_panel and expedition_panel.has_method("update_progress"):
+		expedition_panel.update_progress(message, progress)
+
+
+func _on_expedition_completed(expedition_id: String, success: bool, rewards: Dictionary) -> void:
+	print("[GameSession] 出征结束: %s — %s" % [expedition_id, "胜利" if success else "失败"])
+
+	# 显示结算
+	if expedition_panel and expedition_panel.has_method("show_result"):
+		expedition_panel.show_result(success, rewards)
+
+	# 延迟后隐藏并通知 PhaseManager
+	await get_tree().create_timer(3.0).timeout
+	if expedition_panel:
+		expedition_panel.hide_panel()
+	phase_manager.on_expedition_completed()
+
+
+func _on_support_requested() -> void:
+	expedition_manager.use_support()
+
+
+func _on_support_used(remaining: int) -> void:
+	if expedition_panel and expedition_panel.has_method("update_support_button"):
+		expedition_panel.update_support_button(remaining)
+
+
+# ============================================================
+# BOSS 系统
+# ============================================================
+
+func _on_enemy_spawned_for_boss(enemy: Node2D) -> void:
+	# 检查是否是 BOSS
+	if "enemy_type" in enemy and enemy.enemy_type == "demon_boss":
+		if boss_hp_bar and boss_hp_bar.has_method("bind_boss"):
+			boss_hp_bar.bind_boss(enemy)
+		# 绑定后断开，避免重复
+		if wave_spawner.enemy_spawned.is_connected(_on_enemy_spawned_for_boss):
+			wave_spawner.enemy_spawned.disconnect(_on_enemy_spawned_for_boss)
+
+
+# ============================================================
+# 结算屏幕
+# ============================================================
+
+func _on_game_over(victory: bool) -> void:
+	if result_screen and result_screen.has_method("show_result"):
+		var stats: Dictionary = {
+			"kill_count": GameManager.kill_count,
+			"total_damage": GameManager.total_damage_dealt,
+			"gold_earned": GameManager.resources.get("gold", 0),
+			"crystal_earned": GameManager.resources.get("crystal", 0),
+			"waves_survived": wave_spawner.current_wave_index,
+			"town_level": GameManager.town_level,
+		}
+		result_screen.show_result(victory, stats)
+
+
+func _on_restart_requested() -> void:
+	if result_screen and result_screen.has_method("hide_result"):
+		result_screen.hide_result()
+	get_tree().reload_current_scene()
+
+
+func _on_main_menu_requested() -> void:
+	if result_screen and result_screen.has_method("hide_result"):
+		result_screen.hide_result()
+	get_tree().change_scene_to_file("res://scenes/main/main_menu.tscn")
+
+
+# ============================================================
+# 建筑系统
+# ============================================================
 
 func _on_building_placed(building: Node, _grid_pos: Variant) -> void:
 	# 注册到 BuildingManager
@@ -205,14 +410,9 @@ func _on_building_placed(building: Node, _grid_pos: Variant) -> void:
 
 
 func _on_town_level_up(new_level: int) -> void:
-	print("[GameSession] 城镇升级到 Lv.%d! 触发建筑选择" % new_level)
-	# 城镇升级时先弹出三选一建筑选择
-	if building_selection and building_selection.has_method("show_selection"):
-		building_selection.show_selection(["arrow_tower", "gold_mine", "barracks"])
-		# 等待建筑选择完成后再触发卡牌选择
-		await building_selection.building_selected
-	# 建筑选择完成（或无建筑选择 UI），触发卡牌选择
-	_trigger_card_selection()
+	print("[GameSession] 城镇升级到 Lv.%d!" % new_level)
+	# 标记 PhaseManager 待选卡牌（在 wave_clear 后触发选择流程）
+	phase_manager.pending_card_selection = true
 
 
 func _on_building_selection_made(building_id: String) -> void:
@@ -229,10 +429,12 @@ func _on_building_selection_made(building_id: String) -> void:
 func _trigger_card_selection() -> void:
 	if card_pool == null or card_selection == null:
 		print("[GameSession] 卡牌系统未就绪，跳过卡牌选择")
+		phase_manager.on_card_selection_done()
 		return
 
 	if current_hero == null:
 		print("[GameSession] 当前无英雄，跳过卡牌选择")
+		phase_manager.on_card_selection_done()
 		return
 
 	# 获取当前英雄 ID（用于 hero_filter 过滤）
@@ -243,12 +445,13 @@ func _trigger_card_selection() -> void:
 		hero_id = current_hero.get_meta("hero_id")
 
 	# 从卡牌池抽取 3 张
-	var current_wave: int = GameManager.current_wave
+	var current_wave_val: int = GameManager.current_wave
 	var total_waves: int = wave_spawner.get_total_waves() if wave_spawner.has_method("get_total_waves") else 10
-	var cards: Array = card_pool.draw_three(current_wave, total_waves, hero_id)
+	var cards: Array = card_pool.draw_three(current_wave_val, total_waves, hero_id)
 
 	if cards.size() < 3:
 		print("[GameSession] 卡牌池不足 3 张可用卡牌，跳过卡牌选择")
+		phase_manager.on_card_selection_done()
 		return
 
 	# 将 CardData 转换为 Dictionary 以兼容 CardSelectionUI 信号
@@ -280,6 +483,7 @@ func _trigger_card_selection() -> void:
 func _on_card_selected(card_data: Dictionary) -> void:
 	if current_hero == null:
 		push_warning("[GameSession] _on_card_selected: 当前无英雄")
+		phase_manager.on_card_selection_done()
 		return
 
 	var card_name: String = card_data.get("name", card_data.get("id", "unknown"))
@@ -299,3 +503,6 @@ func _on_card_selected(card_data: Dictionary) -> void:
 				break
 
 	print("[GameSession] 卡牌 %s 效果已应用" % card_name)
+
+	# 通知 PhaseManager 卡牌选择完成
+	phase_manager.on_card_selection_done()

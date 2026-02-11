@@ -1,4 +1,4 @@
-[gd_scene load_steps=10 format=3 uid="uid://game_session"]
+[gd_scene load_steps=17 format=3 uid="uid://game_session"]
 
 [ext_resource type="Script" path="res://scripts/core/game_session.gd" id="1_session"]
 [ext_resource type="Script" path="res://scripts/core/wave_spawner.gd" id="2_wave"]
@@ -9,6 +9,13 @@
 [ext_resource type="Script" path="res://scripts/ui/building_upgrade_ui.gd" id="7_bupg"]
 [ext_resource type="Script" path="res://scripts/ui/building_interact.gd" id="8_bint"]
 [ext_resource type="PackedScene" uid="uid://card_selection" path="res://scenes/ui/card_selection.tscn" id="9_cardscn"]
+[ext_resource type="Script" path="res://scripts/core/phase_manager.gd" id="10_phase"]
+[ext_resource type="Script" path="res://scripts/core/expedition_manager.gd" id="11_expmgr"]
+[ext_resource type="PackedScene" uid="uid://wave_preview" path="res://scenes/ui/wave_preview.tscn" id="12_waveprev"]
+[ext_resource type="Script" path="res://scripts/ui/boss_hp_bar.gd" id="13_bosshp"]
+[ext_resource type="Script" path="res://scripts/ui/minimap.gd" id="14_minimap"]
+[ext_resource type="PackedScene" uid="uid://expedition_panel" path="res://scenes/ui/expedition_panel.tscn" id="15_exppanel"]
+[ext_resource type="PackedScene" uid="uid://result_screen" path="res://scenes/ui/result_screen.tscn" id="16_result"]
 
 [node name="GameSession" type="Node2D"]
 script = ExtResource("1_session")
@@ -42,6 +49,12 @@ script = ExtResource("3_pool")
 
 [node name="TowerPlacement" type="Node2D" parent="."]
 script = ExtResource("4_placement")
+
+[node name="PhaseManager" type="Node" parent="."]
+script = ExtResource("10_phase")
+
+[node name="ExpeditionManager" type="Node" parent="."]
+script = ExtResource("11_expmgr")
 
 [node name="UI" type="CanvasLayer" parent="."]
 
@@ -173,6 +186,70 @@ visible = false
 script = ExtResource("7_bupg")
 
 [node name="CardSelection" parent="UI" instance=ExtResource("9_cardscn")]
+
+[node name="WavePreview" parent="UI" instance=ExtResource("12_waveprev")]
+
+[node name="BossHPBar" type="Control" parent="UI"]
+anchors_preset = 10
+anchor_right = 1.0
+offset_top = 35.0
+offset_bottom = 75.0
+grow_horizontal = 2
+visible = false
+script = ExtResource("13_bosshp")
+
+[node name="VBox" type="VBoxContainer" parent="UI/BossHPBar"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -120.0
+offset_top = -18.0
+offset_right = 120.0
+offset_bottom = 18.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 2
+
+[node name="NameLabel" type="Label" parent="UI/BossHPBar/VBox"]
+layout_mode = 2
+text = "BOSS"
+horizontal_alignment = 1
+
+[node name="HPBar" type="ProgressBar" parent="UI/BossHPBar/VBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(240, 12)
+max_value = 100.0
+value = 100.0
+show_percentage = false
+
+[node name="HPLabel" type="Label" parent="UI/BossHPBar/VBox/HPBar"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+text = "100 / 100"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Minimap" type="Control" parent="UI"]
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -130.0
+offset_top = 5.0
+offset_right = -5.0
+offset_bottom = 100.0
+grow_horizontal = 0
+script = ExtResource("14_minimap")
+
+[node name="ExpeditionPanel" parent="UI" instance=ExtResource("15_exppanel")]
+
+[node name="ResultScreen" parent="UI" instance=ExtResource("16_result")]
 
 [node name="BuildingInteract" type="Node" parent="."]
 script = ExtResource("8_bint")

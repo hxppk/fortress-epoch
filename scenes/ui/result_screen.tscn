@@ -1,0 +1,95 @@
+[gd_scene load_steps=3 format=3 uid="uid://result_screen"]
+
+[ext_resource type="Script" path="res://scripts/ui/result_screen.gd" id="1_script"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
+bg_color = Color(0.1, 0.1, 0.15, 0.95)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.8, 0.7, 0.3, 1.0)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+content_margin_left = 16.0
+content_margin_top = 16.0
+content_margin_right = 16.0
+content_margin_bottom = 16.0
+
+[node name="ResultScreen" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+process_mode = 3
+visible = false
+script = ExtResource("1_script")
+
+[node name="DimOverlay" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.75)
+
+[node name="CenterPanel" type="PanelContainer" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -200.0
+offset_top = -180.0
+offset_right = 200.0
+offset_bottom = 180.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="VBox" type="VBoxContainer" parent="CenterPanel"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="TitleLabel" type="Label" parent="CenterPanel/VBox"]
+layout_mode = 2
+text = "结算"
+horizontal_alignment = 1
+vertical_alignment = 1
+theme_override_font_sizes/font_size = 28
+
+[node name="SubtitleLabel" type="Label" parent="CenterPanel/VBox"]
+layout_mode = 2
+text = ""
+horizontal_alignment = 1
+
+[node name="HSeparator" type="HSeparator" parent="CenterPanel/VBox"]
+layout_mode = 2
+
+[node name="StatsContainer" type="VBoxContainer" parent="CenterPanel/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="HSeparator2" type="HSeparator" parent="CenterPanel/VBox"]
+layout_mode = 2
+
+[node name="ButtonsContainer" type="HBoxContainer" parent="CenterPanel/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 20
+alignment = 1
+
+[node name="RestartButton" type="Button" parent="CenterPanel/VBox/ButtonsContainer"]
+layout_mode = 2
+custom_minimum_size = Vector2(100, 30)
+text = "再来一局"
+
+[node name="MenuButton" type="Button" parent="CenterPanel/VBox/ButtonsContainer"]
+layout_mode = 2
+custom_minimum_size = Vector2(100, 30)
+text = "返回主菜单"

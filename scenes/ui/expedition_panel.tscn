@@ -1,0 +1,99 @@
+[gd_scene load_steps=3 format=3 uid="uid://expedition_panel"]
+
+[ext_resource type="Script" path="res://scripts/ui/expedition_ui.gd" id="1_expedition_ui"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bg"]
+bg_color = Color(0.08, 0.08, 0.12, 0.9)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.4, 0.4, 0.5, 0.8)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+content_margin_left = 10.0
+content_margin_top = 8.0
+content_margin_right = 10.0
+content_margin_bottom = 8.0
+
+[node name="ExpeditionPanel" type="Control"]
+layout_mode = 3
+anchors_preset = -1
+anchor_left = 0.65
+anchor_top = 0.05
+anchor_right = 1.0
+anchor_bottom = 0.95
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_expedition_ui")
+
+[node name="Background" type="PanelContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_bg")
+
+[node name="SelectionPanel" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 12.0
+offset_top = 10.0
+offset_right = -12.0
+offset_bottom = -10.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 8
+
+[node name="SelectTitle" type="Label" parent="SelectionPanel"]
+layout_mode = 2
+text = "选择出征目标"
+horizontal_alignment = 1
+
+[node name="ProgressPanel" type="VBoxContainer" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 12.0
+offset_top = 10.0
+offset_right = -12.0
+offset_bottom = -10.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 8
+
+[node name="TitleLabel" type="Label" parent="ProgressPanel"]
+layout_mode = 2
+text = "出征中..."
+horizontal_alignment = 1
+
+[node name="ProgressBar" type="ProgressBar" parent="ProgressPanel"]
+layout_mode = 2
+max_value = 100.0
+value = 0.0
+
+[node name="NarrationLabel" type="Label" parent="ProgressPanel"]
+custom_minimum_size = Vector2(0, 60)
+layout_mode = 2
+text = ""
+autowrap_mode = 2
+vertical_alignment = 1
+
+[node name="SupportButton" type="Button" parent="ProgressPanel"]
+layout_mode = 2
+text = "远程支援 (2)"
+
+[node name="ResultLabel" type="Label" parent="ProgressPanel"]
+visible = false
+layout_mode = 2
+text = ""
+autowrap_mode = 2
+horizontal_alignment = 1

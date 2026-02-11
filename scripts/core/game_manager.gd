@@ -20,7 +20,7 @@ signal town_level_up(new_level: int)
 # 属性
 # ============================================================
 
-## 游戏状态："menu" | "playing" | "paused" | "wave_clear" | "game_over"
+## 游戏状态："menu" | "playing" | "paused" | "wave_clear" | "card_selection" | "transition" | "expedition" | "boss" | "game_over"
 var game_state: String = "menu":
 	set(value):
 		if game_state != value:
@@ -68,6 +68,7 @@ var total_exp: int = 0
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS  # 暂停时仍可接收信号
+	last_stand_activated.connect(activate_last_stand_buff)
 
 # ============================================================
 # 资源操作
@@ -162,6 +163,27 @@ func start_game() -> void:
 func end_game(victory: bool) -> void:
 	game_state = "game_over"
 	game_over.emit(victory)
+
+
+## 根据玩家数量初始化共享血池（读 waves.json 的 shared_hp_pool.by_player_count 配置）
+func setup_shared_hp_by_players(player_count_val: int, hp_config: Dictionary) -> void:
+	var key: String = str(player_count_val)
+	if hp_config.has(key):
+		var cfg: Dictionary = hp_config[key]
+		max_shared_hp = int(cfg.get("initial_hp", 60))
+		shared_hp = max_shared_hp
+		shared_hp_changed.emit(shared_hp, max_shared_hp)
+
+
+## 激活背水一战 buff -- 为所有英雄增加攻击力 +20%
+func activate_last_stand_buff() -> void:
+	var heroes: Array[Node] = get_tree().get_nodes_in_group("heroes")
+	for hero: Node in heroes:
+		if hero.has_node("StatsComponent"):
+			var stats: StatsComponent = hero.get_node("StatsComponent")
+			var base_attack: float = stats.get_stat("attack")
+			var bonus: int = roundi(base_attack * 0.2)
+			stats.add_modifier("attack", "last_stand_buff", float(bonus))
 
 # ============================================================
 # 经验 / 城镇等级
