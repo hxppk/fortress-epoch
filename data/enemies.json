@@ -6,7 +6,7 @@
       "type": "basic",
       "sprite": "res://assets/sprites/enemies/slime.png",
       "behavior": "straight_charge",
-      "stats": { "hp": 50, "attack": 5, "defense": 0, "speed": 50 },
+      "stats": { "hp": 50, "attack": 5, "defense": 0, "speed": 18 },
       "threat": "low",
       "loot": { "gold": [3, 5], "crystal": 0, "exp": [5, 8] },
       "note": "教学专用"
@@ -17,7 +17,7 @@
       "type": "basic",
       "sprite": "res://assets/sprites/enemies/goblin.png",
       "behavior": "straight_charge",
-      "stats": { "hp": 100, "attack": 10, "defense": 1, "speed": 60 },
+      "stats": { "hp": 100, "attack": 10, "defense": 1, "speed": 22 },
       "threat": "low",
       "loot": { "gold": [5, 10], "crystal": 0, "exp": [10, 15] },
       "note": "教学专用"
@@ -28,7 +28,7 @@
       "type": "basic",
       "sprite": "res://assets/sprites/enemies/skeleton.png",
       "behavior": "straight_charge",
-      "stats": { "hp": 100, "attack": 8, "defense": 2, "speed": 60 },
+      "stats": { "hp": 100, "attack": 8, "defense": 2, "speed": 22 },
       "threat": "low",
       "loot": {
         "gold": [5, 10],
@@ -44,7 +44,7 @@
       "type": "basic",
       "sprite": "res://assets/sprites/enemies/ghost.png",
       "behavior": "fast_approach",
-      "stats": { "hp": 60, "attack": 6, "defense": 0, "speed": 120 },
+      "stats": { "hp": 60, "attack": 6, "defense": 0, "speed": 43 },
       "threat": "medium",
       "special": "高速低血量",
       "loot": {
@@ -61,7 +61,7 @@
       "type": "basic",
       "sprite": "res://assets/sprites/enemies/zombie.png",
       "behavior": "slow_tank",
-      "stats": { "hp": 200, "attack": 12, "defense": 5, "speed": 35 },
+      "stats": { "hp": 200, "attack": 12, "defense": 5, "speed": 13 },
       "threat": "medium",
       "special": "高血量低速度",
       "loot": {
@@ -78,7 +78,7 @@
       "type": "elite",
       "sprite": "res://assets/sprites/enemies/orc_elite.png",
       "behavior": "charge_and_slash",
-      "stats": { "hp": 500, "attack": 20, "defense": 8, "speed": 70 },
+      "stats": { "hp": 500, "attack": 20, "defense": 8, "speed": 25 },
       "threat": "high",
       "special": "每损失25%生命值狂暴一次，攻速+50%",
       "enrage_thresholds": [0.75, 0.50, 0.25],
@@ -98,7 +98,7 @@
       "type": "boss",
       "sprite": "res://assets/sprites/enemies/demon_boss.png",
       "behavior": "two_phase",
-      "stats": { "hp": 3000, "attack": 30, "defense": 15, "speed": 50 },
+      "stats": { "hp": 3000, "attack": 30, "defense": 15, "speed": 18 },
       "threat": "extreme",
       "phases": [
         {

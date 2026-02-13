@@ -82,6 +82,10 @@ func _physics_process(delta: float) -> void:
 
 	move_and_slide()
 
+	# 限制英雄在地图范围内
+	global_position.x = clampf(global_position.x, 10.0, 470.0)
+	global_position.y = clampf(global_position.y, 10.0, 260.0)
+
 
 func _process(delta: float) -> void:
 	# Bobbing 动画：仅在移动时生效

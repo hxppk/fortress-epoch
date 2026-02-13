@@ -155,6 +155,9 @@ func skip_expedition() -> void:
 
 ## 出征结算
 func _complete_expedition() -> void:
+	if not is_active and active_expedition.is_empty():
+		return  # 防止重复结算
+
 	is_active = false
 
 	# 计算成功率

@@ -49,6 +49,9 @@ var placeable_area: Rect2i = Rect2i(0, 0, 60, 40)
 ## 所有已放置建筑
 var buildings: Array[BuildingBase] = []
 
+## 建筑应添加到的父节点（由 GameSession 在初始化时设置）
+var buildings_parent: Node2D = null
+
 ## 缓存的建筑数据（从 JSON 加载）
 var _buildings_data: Dictionary = {}
 
@@ -209,7 +212,10 @@ func _place_building(grid_pos: Vector2i) -> void:
 		return
 
 	# 添加到场景树
-	add_child(building)
+	if buildings_parent:
+		buildings_parent.add_child(building)
+	else:
+		add_child(building)
 
 	# 放置到网格位置
 	var world_pos: Vector2 = _grid_to_world(grid_pos)

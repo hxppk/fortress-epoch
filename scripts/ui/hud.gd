@@ -13,6 +13,8 @@ extends Control
 @onready var skill2_bar: ProgressBar = $BottomBar/Skill2Bar
 @onready var ultimate_bar: ProgressBar = $BottomBar/UltimateBar
 var build_buttons: HBoxContainer = null
+var countdown_label: Label = null
+var castle_hp_label: Label = null
 
 
 func _ready() -> void:
@@ -49,10 +51,45 @@ func _ready() -> void:
 		var barracks_btn := build_buttons.get_node_or_null("BarracksBtn") as Button
 		if arrow_btn:
 			arrow_btn.pressed.connect(_on_build_arrow_tower)
+			arrow_btn.text = "箭塔(50金)[1]"
 		if mine_btn:
 			mine_btn.pressed.connect(_on_build_gold_mine)
+			mine_btn.text = "金矿(50金)[2]"
 		if barracks_btn:
 			barracks_btn.pressed.connect(_on_build_barracks)
+			barracks_btn.text = "兵营(免费)[3]"
+
+	# 创建倒计时标签（HUD 中央偏上）
+	countdown_label = Label.new()
+	countdown_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	countdown_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	countdown_label.add_theme_font_size_override("font_size", 64)
+	countdown_label.add_theme_color_override("font_color", Color.YELLOW)
+	countdown_label.add_theme_color_override("font_shadow_color", Color.BLACK)
+	countdown_label.add_theme_constant_override("shadow_offset_x", 3)
+	countdown_label.add_theme_constant_override("shadow_offset_y", 3)
+	countdown_label.anchors_preset = Control.PRESET_CENTER_TOP
+	countdown_label.offset_top = 38.0
+	countdown_label.offset_bottom = 90.0
+	countdown_label.offset_left = -40.0
+	countdown_label.offset_right = 40.0
+	countdown_label.visible = false
+	add_child(countdown_label)
+
+	# 创建城堡生命标签（左下角）
+	castle_hp_label = Label.new()
+	castle_hp_label.add_theme_font_size_override("font_size", 20)
+	castle_hp_label.add_theme_color_override("font_color", Color(1.0, 0.3, 0.3))
+	castle_hp_label.add_theme_color_override("font_shadow_color", Color.BLACK)
+	castle_hp_label.add_theme_constant_override("shadow_offset_x", 1)
+	castle_hp_label.add_theme_constant_override("shadow_offset_y", 1)
+	castle_hp_label.anchors_preset = Control.PRESET_BOTTOM_LEFT
+	castle_hp_label.offset_left = 8.0
+	castle_hp_label.offset_top = -60.0
+	castle_hp_label.offset_right = 200.0
+	castle_hp_label.offset_bottom = -42.0
+	castle_hp_label.text = "堡垒生命: %d" % GameManager.shared_hp
+	add_child(castle_hp_label)
 
 
 func _on_resource_changed(type: String, new_amount: int) -> void:
@@ -71,6 +108,8 @@ func _on_hp_changed(current: int, maximum: int) -> void:
 		hp_bar.value = current
 	if hp_label:
 		hp_label.text = "%d / %d" % [current, maximum]
+	if castle_hp_label:
+		castle_hp_label.text = "堡垒生命: %d" % current
 
 
 func update_wave_info(wave_number: int, label: String) -> void:
@@ -139,18 +178,24 @@ func _show_level_up_notification(level: int) -> void:
 
 # ---- 建筑快捷按钮回调 ----
 func _on_build_arrow_tower() -> void:
+	if CombatFeedback and CombatFeedback.has_method("play_click_sound"):
+		CombatFeedback.play_click_sound()
 	var placement := _get_tower_placement()
 	if placement and placement.has_method("start_placement"):
 		placement.start_placement("arrow_tower")
 
 
 func _on_build_gold_mine() -> void:
+	if CombatFeedback and CombatFeedback.has_method("play_click_sound"):
+		CombatFeedback.play_click_sound()
 	var placement := _get_tower_placement()
 	if placement and placement.has_method("start_placement"):
 		placement.start_placement("gold_mine")
 
 
 func _on_build_barracks() -> void:
+	if CombatFeedback and CombatFeedback.has_method("play_click_sound"):
+		CombatFeedback.play_click_sound()
 	var placement := _get_tower_placement()
 	if placement and placement.has_method("start_placement"):
 		placement.start_placement("barracks")
@@ -161,3 +206,15 @@ func _get_tower_placement() -> Node:
 	if session and session.has_node("TowerPlacement"):
 		return session.get_node("TowerPlacement")
 	return null
+
+
+## 显示/隐藏波次倒计时
+func show_countdown(seconds: int) -> void:
+	if countdown_label == null:
+		return
+	if seconds <= 0:
+		countdown_label.visible = false
+		countdown_label.text = ""
+	else:
+		countdown_label.text = str(seconds)
+		countdown_label.visible = true

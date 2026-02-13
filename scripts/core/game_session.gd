@@ -6,6 +6,7 @@ extends Node2D
 # 场景预加载
 const WolfKnightScene := preload("res://scenes/entities/heroes/wolf_knight.tscn")
 const MeteorMageScene := preload("res://scenes/entities/heroes/meteor_mage.tscn")
+const NPCScene := preload("res://scenes/entities/npcs/npc_base.tscn")
 
 # 节点引用 — 基础系统
 @onready var map: Node2D = $Map
@@ -19,6 +20,7 @@ const MeteorMageScene := preload("res://scenes/entities/heroes/meteor_mage.tscn"
 @onready var tower_placement: TowerPlacement = $TowerPlacement
 @onready var phase_manager: PhaseManager = $PhaseManager
 @onready var expedition_manager: ExpeditionManager = $ExpeditionManager
+var expedition_battle: ExpeditionBattle = null
 
 # 节点引用 — UI
 @onready var hud: Control = $UI/HUD
@@ -41,14 +43,14 @@ var skill_system: SkillSystem = null
 var auto_attack: AutoAttackComponent = null
 
 # 堡垒核心位置（地图中心偏下）
-var fortress_position := Vector2(240, 200)
+var fortress_position := Vector2(40, 135)
 
 # 出生点
 var spawn_points := {
-	"north": Vector2(240, -20),
-	"east": Vector2(500, 150),
-	"south": Vector2(240, 420),
-	"west": Vector2(-20, 150),
+	"north": Vector2(500, 40),
+	"east": Vector2(500, 135),
+	"south": Vector2(500, 230),
+	"west": Vector2(500, 135),
 }
 
 
@@ -71,6 +73,7 @@ func _setup_game() -> void:
 	wave_spawner.all_waves_completed.connect(_on_all_waves_completed)
 
 	# 初始化塔放置系统
+	tower_placement.buildings_parent = buildings_node
 	tower_placement.placeable_area = Rect2i(2, 2, 26, 22)
 	tower_placement.building_placed.connect(_on_building_placed)
 
@@ -100,6 +103,7 @@ func _setup_game() -> void:
 	# 初始化 PhaseManager
 	phase_manager.initialize(wave_spawner)
 	phase_manager.phase_changed.connect(_on_phase_changed)
+	phase_manager.countdown_tick.connect(_on_countdown_tick)
 	phase_manager.tutorial_message.connect(_on_tutorial_message)
 	phase_manager.transition_tick.connect(_on_transition_tick)
 	phase_manager.transition_ended.connect(_on_transition_ended)
@@ -110,6 +114,12 @@ func _setup_game() -> void:
 	expedition_manager.expedition_progress.connect(_on_expedition_progress)
 	expedition_manager.expedition_completed.connect(_on_expedition_completed)
 	expedition_manager.support_used.connect(_on_support_used)
+
+	# Initialize expedition battle system (visual attack mode)
+	expedition_battle = ExpeditionBattle.new()
+	expedition_battle.name = "ExpeditionBattle"
+	add_child(expedition_battle)
+	expedition_battle.battle_ended.connect(_on_expedition_battle_ended)
 
 	# 出征 UI 信号
 	if expedition_panel:
@@ -125,6 +135,10 @@ func _setup_game() -> void:
 		if result_screen.has_signal("main_menu_requested"):
 			result_screen.main_menu_requested.connect(_on_main_menu_requested)
 
+	# NPC 自动生成信号
+	if BuildingManager.has_signal("npc_spawn_triggered"):
+		BuildingManager.npc_spawn_triggered.connect(_on_npc_spawn_triggered)
+
 	# 生成英雄
 	_spawn_hero()
 
@@ -135,7 +149,7 @@ func _setup_game() -> void:
 func _spawn_hero() -> void:
 	current_hero = WolfKnightScene.instantiate() as HeroBase
 	heroes_node.add_child(current_hero)
-	current_hero.global_position = fortress_position + Vector2(0, -30)
+	current_hero.global_position = fortress_position + Vector2(30, 0)
 	current_hero.initialize("wolf_knight")
 	current_hero.add_to_group("heroes")
 
@@ -157,15 +171,12 @@ func _spawn_hero() -> void:
 	var attack_area: Area2D = current_hero.get_node("AttackArea")
 	auto_attack.initialize(current_hero, stats_comp, attack_area)
 
-	# 相机跟随英雄
-	camera.reparent(current_hero)
-	camera.position = Vector2.ZERO
 
 
 func _process(_delta: float) -> void:
 	# 允许在多种活跃状态下处理输入
 	var state: String = GameManager.game_state
-	if state in ["playing", "boss", "expedition", "transition"]:
+	if state in ["playing", "boss", "transition"]:
 		_handle_input()
 
 
@@ -197,13 +208,14 @@ func _handle_input() -> void:
 			if skill_system.can_use_ultimate():
 				skill_system.use_ultimate()
 
-	# 建筑放置快捷键（数字键 1-3）
-	if Input.is_key_pressed(KEY_1):
-		tower_placement.start_placement("arrow_tower")
-	elif Input.is_key_pressed(KEY_2):
-		tower_placement.start_placement("gold_mine")
-	elif Input.is_key_pressed(KEY_3):
-		tower_placement.start_placement("barracks")
+	# 建筑放置快捷键（数字键 1-3）— 仅在非放置模式时响应
+	if not tower_placement.is_placing:
+		if Input.is_key_pressed(KEY_1):
+			tower_placement.start_placement("arrow_tower")
+		elif Input.is_key_pressed(KEY_2):
+			tower_placement.start_placement("gold_mine")
+		elif Input.is_key_pressed(KEY_3):
+			tower_placement.start_placement("barracks")
 
 
 # ============================================================
@@ -213,11 +225,17 @@ func _handle_input() -> void:
 func _on_phase_changed(phase_name: String, _phase_data: Dictionary) -> void:
 	print("[GameSession] 阶段切换: %s" % phase_name)
 
+	# 阶段切换时关闭建筑升级面板，防止与其他 UI 面板重叠
+	if building_upgrade_panel and building_upgrade_panel.has_method("hide_panel"):
+		building_upgrade_panel.hide_panel()
+
 	match phase_name:
 		"transition":
 			# 显示出征选择界面
 			if expedition_panel and expedition_panel.has_method("show_selection"):
 				expedition_panel.show_selection(expedition_manager.get_available_expeditions())
+		"expedition":
+			_start_expedition_battle()
 		"card_selection":
 			# 先弹建筑选择，完成后再弹卡牌选择
 			_handle_card_selection_phase()
@@ -232,8 +250,9 @@ func _handle_card_selection_phase() -> void:
 	# 城镇升级时先弹出三选一建筑选择
 	if building_selection and building_selection.has_method("show_selection"):
 		building_selection.show_selection(["arrow_tower", "gold_mine", "barracks"])
-		# 等待建筑选择完成后再触发卡牌选择
-		await building_selection.building_selected
+		# 仅在 UI 确实激活时等待选择完成
+		if building_selection.is_active:
+			await building_selection.building_selected
 	# 建筑选择完成，触发卡牌选择
 	_trigger_card_selection()
 
@@ -249,6 +268,11 @@ func _on_transition_tick(remaining: float) -> void:
 	# 更新 HUD 中的倒计时显示
 	if hud and hud.has_method("update_wave_info"):
 		hud.update_wave_info(0, "出征准备 %.0fs" % maxf(remaining, 0))
+
+
+func _on_countdown_tick(seconds: int) -> void:
+	if hud and hud.has_method("show_countdown"):
+		hud.show_countdown(seconds)
 
 
 func _on_transition_ended() -> void:
@@ -353,6 +377,39 @@ func _on_support_requested() -> void:
 func _on_support_used(remaining: int) -> void:
 	if expedition_panel and expedition_panel.has_method("update_support_button"):
 		expedition_panel.update_support_button(remaining)
+
+
+## Start visual expedition battle
+func _start_expedition_battle() -> void:
+	if expedition_battle == null:
+		phase_manager.on_expedition_completed()
+		return
+
+	# Collect all NPCUnit nodes
+	var npcs: Array = []
+	var heroes: Array = get_tree().get_nodes_in_group("heroes")
+	for hero: Node in heroes:
+		if hero is NPCUnit and is_instance_valid(hero):
+			npcs.append(hero)
+
+	if npcs.is_empty():
+		phase_manager.on_expedition_completed()
+		return
+
+	expedition_battle.start_battle(npcs, self)
+
+
+## Expedition battle ended callback
+func _on_expedition_battle_ended(reason: String) -> void:
+	print("[GameSession] 出征战斗结束: %s" % reason)
+
+	if reason == "victory":
+		# Evil castle destroyed → game victory
+		GameManager.end_game(true)
+		return
+
+	# timeout or all_dead → return to defense mode
+	phase_manager.on_expedition_completed()
 
 
 # ============================================================
@@ -505,3 +562,104 @@ func _on_card_selected(card_data: Dictionary) -> void:
 
 	# 通知 PhaseManager 卡牌选择完成
 	phase_manager.on_card_selection_done()
+
+
+# ============================================================
+# NPC 自动生成系统
+# ============================================================
+
+func _on_npc_spawn_triggered(building_type: String) -> void:
+	_spawn_npc(building_type)
+
+
+func _spawn_npc(building_type: String) -> void:
+	var buildings_list: Array = BuildingManager.get_buildings_by_type(building_type)
+	if buildings_list.is_empty():
+		return
+
+	# P0-1: 每种 NPC 上限 1 个
+	var expected_npc_type: String
+	match building_type:
+		"arrow_tower": expected_npc_type = "archer"
+		"barracks": expected_npc_type = "knight"
+		"gold_mine": expected_npc_type = "miner"
+		_: expected_npc_type = building_type
+
+	var heroes: Array = get_tree().get_nodes_in_group("heroes")
+	for hero: Node in heroes:
+		if hero is NPCUnit and hero.npc_type == expected_npc_type:
+			print("[GameSession] NPC已存在，跳过: %s" % expected_npc_type)
+			return
+
+	# 计算所有同类建筑的中心点
+	var center := Vector2.ZERO
+	for b: Node in buildings_list:
+		center += b.global_position
+	center /= float(buildings_list.size())
+
+	var npc: NPCUnit = NPCScene.instantiate() as NPCUnit
+	heroes_node.add_child(npc)
+
+	# 获取最高等级建筑的数据
+	var best_level_data: Dictionary = {}
+	var highest_level: int = 0
+	for b: Node in buildings_list:
+		if "current_level" in b and b.current_level > highest_level:
+			highest_level = b.current_level
+			best_level_data = b.level_data
+	if best_level_data.is_empty() and not buildings_list.is_empty():
+		best_level_data = buildings_list[0].level_data
+
+	var npc_stats: Dictionary = {}
+	var attack_range: float = 40.0
+	var attack_pattern: String = "single_target"
+	var npc_type: String = ""
+
+	match building_type:
+		"arrow_tower":
+			npc_type = "archer"
+			var tower_dmg: float = float(best_level_data.get("damage", 16))
+			var tower_range: float = float(best_level_data.get("range", 96))
+			var tower_atk_interval: float = float(best_level_data.get("attack_speed", 1.0))
+			npc_stats = {
+				"hp": 60,
+				"attack": tower_dmg,
+				"defense": 2,
+				"speed": 50,
+				"attack_speed": 1.0 / maxf(tower_atk_interval, 0.1),
+				"attack_range": tower_range,
+				"crit_rate": 0.05,
+			}
+			attack_range = tower_range
+		"barracks":
+			npc_type = "knight"
+			var phys_bonus: float = float(best_level_data.get("phys_attack_bonus", 10))
+			var hp_bonus: float = float(best_level_data.get("hp_bonus", 50))
+			var armor_bonus: float = float(best_level_data.get("armor_bonus", 2))
+			npc_stats = {
+				"hp": 100 + hp_bonus,
+				"attack": 15 + phys_bonus,
+				"defense": 5 + armor_bonus,
+				"speed": 60,
+				"attack_speed": 1.2,
+				"attack_range": 30,
+				"crit_rate": 0.08,
+			}
+			attack_range = 30.0
+		"gold_mine":
+			npc_type = "miner"
+			var production: float = float(best_level_data.get("production", 5))
+			npc_stats = {
+				"hp": 60 + production * 4.0,
+				"attack": 8 + production * 2.0,
+				"defense": 3,
+				"speed": 40,
+				"attack_speed": 0.8,
+				"attack_range": 25,
+				"crit_rate": 0.03,
+			}
+			attack_range = 25.0
+
+	npc.initialize(npc_type, npc_stats, center, attack_range, attack_pattern)
+	npc.add_to_group("heroes")
+	print("[GameSession] 自动生成 NPC: %s (建筑类型: %s)" % [npc_type, building_type])

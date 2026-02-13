@@ -35,8 +35,8 @@ var resources: Dictionary = {
 }
 
 ## 共享血池
-var shared_hp: int = 60
-var max_shared_hp: int = 60
+var shared_hp: int = 50
+var max_shared_hp: int = 50
 
 ## 关卡 / 波次
 var current_stage: int = 1
@@ -139,6 +139,12 @@ func check_last_stand() -> bool:
 # 游戏流程
 # ============================================================
 
+## 游戏开始时间（用于计算 play_time）
+var _game_start_time: float = 0.0
+
+## 当前使用的英雄 ID
+var current_hero_id: String = "wolf_knight"
+
 ## 开始游戏 — 重置所有状态
 func start_game() -> void:
 	resources = {
@@ -154,13 +160,21 @@ func start_game() -> void:
 	_last_stand_triggered = false
 	town_level = 0
 	total_exp = 0
+	_game_start_time = Time.get_ticks_msec() / 1000.0
 	game_state = "playing"
 	shared_hp_changed.emit(shared_hp, max_shared_hp)
+
+	# 读取局外加成（预留，当前加成为 0）
+	_apply_meta_bonuses()
 
 
 ## 结束游戏
 func end_game(victory: bool) -> void:
 	game_state = "game_over"
+
+	# 局内 → 局外结算
+	_settle_to_meta(victory)
+
 	game_over.emit(victory)
 
 
@@ -169,7 +183,7 @@ func setup_shared_hp_by_players(player_count_val: int, hp_config: Dictionary) ->
 	var key: String = str(player_count_val)
 	if hp_config.has(key):
 		var cfg: Dictionary = hp_config[key]
-		max_shared_hp = int(cfg.get("initial_hp", 60))
+		max_shared_hp = int(cfg.get("initial_hp", 20))
 		shared_hp = max_shared_hp
 		shared_hp_changed.emit(shared_hp, max_shared_hp)
 
@@ -253,3 +267,41 @@ func _get_next_exp_threshold() -> int:
 		return exp_thresholds[next_level]
 	# 已满级，返回当前阈值
 	return exp_thresholds[exp_thresholds.size() - 1]
+
+# ============================================================
+# 局外成长集成
+# ============================================================
+
+## 局内结算 → 存档
+func _settle_to_meta(victory: bool) -> void:
+	if not is_instance_valid(SaveManager):
+		return
+
+	var play_time: float = (Time.get_ticks_msec() / 1000.0) - _game_start_time
+	var game_stats: Dictionary = {
+		"kills": kill_count,
+		"wave": current_wave,
+		"play_time": play_time,
+		"crystal": resources.get("crystal", 0),
+		"badge": resources.get("badge", 0),
+		"hero_id": current_hero_id,
+	}
+	SaveManager.settle_game(victory, game_stats)
+
+
+## 读取局外加成并应用（预留接口，当前加成为 0）
+func _apply_meta_bonuses() -> void:
+	if not is_instance_valid(SaveManager):
+		return
+
+	var bonus: Dictionary = SaveManager.get_hero_bonus(current_hero_id)
+	if bonus.is_empty():
+		return
+
+	# 预留：将在英雄生成后通过 StatsComponent 应用加成
+	# 目前仅打印日志
+	var atk_pct: float = bonus.get("attack_pct", 0.0)
+	if atk_pct > 0.0:
+		print("[GameManager] 局外加成 — attack:+%.0f%% hp:+%.0f%% def:+%.0f%%" % [
+			atk_pct * 100, bonus.get("hp_pct", 0.0) * 100, bonus.get("defense_pct", 0.0) * 100
+		])

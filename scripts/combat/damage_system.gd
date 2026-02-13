@@ -42,6 +42,10 @@ func apply_damage(attacker: Node2D, defender: Node2D, damage_info: Dictionary) -
 	# 飘字
 	create_damage_number(defender.global_position, damage_info["damage"], damage_info["is_crit"])
 
+	# 播放击中音效
+	if CombatFeedback and CombatFeedback.has_method("play_hit_sound"):
+		CombatFeedback.play_hit_sound()
+
 	# 闪白 & 缩放反馈
 	if CombatFeedback:
 		# 被击者闪白

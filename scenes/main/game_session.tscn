@@ -23,25 +23,26 @@ script = ExtResource("1_session")
 [node name="Map" type="Node2D" parent="."]
 
 [node name="FortressCore" type="Marker2D" parent="Map"]
-position = Vector2(240, 200)
+position = Vector2(40, 135)
 
 [node name="SpawnNorth" type="Marker2D" parent="Map"]
-position = Vector2(240, -20)
+position = Vector2(500, 40)
 
 [node name="SpawnEast" type="Marker2D" parent="Map"]
-position = Vector2(500, 150)
+position = Vector2(500, 135)
 
 [node name="SpawnSouth" type="Marker2D" parent="Map"]
-position = Vector2(240, 420)
+position = Vector2(500, 230)
 
 [node name="SpawnWest" type="Marker2D" parent="Map"]
-position = Vector2(-20, 150)
+position = Vector2(500, 135)
 
 [node name="Background" type="ColorRect" parent="Map"]
-offset_left = -50.0
-offset_top = -50.0
-offset_right = 530.0
-offset_bottom = 450.0
+offset_left = -10.0
+offset_top = -10.0
+offset_right = 490.0
+offset_bottom = 280.0
+mouse_filter = 2
 color = Color(0.18, 0.25, 0.15, 1)
 z_index = -10
 
@@ -50,6 +51,7 @@ offset_left = -16.0
 offset_top = -16.0
 offset_right = 16.0
 offset_bottom = 16.0
+mouse_filter = 2
 color = Color(0.8, 0.65, 0.2, 1)
 
 [node name="FortressLabel" type="Label" parent="Map/FortressCore"]
@@ -57,6 +59,7 @@ offset_left = -24.0
 offset_top = -30.0
 offset_right = 24.0
 offset_bottom = -16.0
+mouse_filter = 2
 horizontal_alignment = 1
 vertical_alignment = 1
 text = "堡垒"
@@ -94,6 +97,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+mouse_filter = 2
 script = ExtResource("5_hud")
 
 [node name="TopBar" type="HBoxContainer" parent="UI/HUD"]
@@ -114,8 +118,8 @@ text = "Crystal: 0"
 [node name="HPBar" type="ProgressBar" parent="UI/HUD/TopBar"]
 layout_mode = 2
 custom_minimum_size = Vector2(120, 0)
-max_value = 60.0
-value = 60.0
+max_value = 50.0
+value = 50.0
 show_percentage = false
 
 [node name="HPLabel" type="Label" parent="UI/HUD/TopBar/HPBar"]
@@ -125,7 +129,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-text = "60 / 60"
+text = "50 / 50"
 horizontal_alignment = 1
 vertical_alignment = 1
 
@@ -184,15 +188,15 @@ theme_override_constants/separation = 6
 
 [node name="ArrowTowerBtn" type="Button" parent="UI/HUD/BottomBar/BuildButtons"]
 layout_mode = 2
-text = "箭塔[1]"
+text = "箭塔(50金)[1]"
 
 [node name="GoldMineBtn" type="Button" parent="UI/HUD/BottomBar/BuildButtons"]
 layout_mode = 2
-text = "金矿[2]"
+text = "金矿(50金)[2]"
 
 [node name="BarracksBtn" type="Button" parent="UI/HUD/BottomBar/BuildButtons"]
 layout_mode = 2
-text = "兵营[3]"
+text = "兵营(免费)[3]"
 
 [node name="BuildingSelection" parent="UI" instance=ExtResource("6_bsel")]
 visible = false
@@ -260,6 +264,7 @@ offset_top = 5.0
 offset_right = -5.0
 offset_bottom = 100.0
 grow_horizontal = 0
+mouse_filter = 2
 script = ExtResource("14_minimap")
 
 [node name="ExpeditionPanel" parent="UI" instance=ExtResource("15_exppanel")]
@@ -270,4 +275,9 @@ script = ExtResource("14_minimap")
 script = ExtResource("8_bint")
 
 [node name="Camera2D" type="Camera2D" parent="."]
+position = Vector2(240, 135)
 zoom = Vector2(2, 2)
+limit_left = 0
+limit_top = 0
+limit_right = 480
+limit_bottom = 270

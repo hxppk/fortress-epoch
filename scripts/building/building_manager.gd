@@ -9,6 +9,7 @@ extends Node
 signal building_registered(building: Node)
 signal building_upgraded(building: Node, new_level: int)
 signal kill_gold_bonus_changed(new_bonus: float)
+signal npc_spawn_triggered(building_type: String)
 
 # ============================================================
 # 属性
@@ -22,6 +23,9 @@ var building_counts: Dictionary = {}
 
 ## 当前击杀金币加成（来自所有金矿中的最高等级）
 var kill_gold_bonus: float = 0.0
+
+## 已触发NPC生成的建筑类型
+var npc_spawned: Dictionary = {}
 
 # ============================================================
 # 公有方法
@@ -47,6 +51,12 @@ func register_building(building: Node) -> void:
 		_update_kill_gold_bonus()
 
 	building_registered.emit(building)
+
+	# 检查是否达到 3 个同类建筑，触发 NPC 生成
+	if building_id != "" and building_counts.get(building_id, 0) >= 3:
+		if not npc_spawned.get(building_id, false):
+			npc_spawned[building_id] = true
+			npc_spawn_triggered.emit(building_id)
 
 
 ## 移除建筑

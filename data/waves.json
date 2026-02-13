@@ -1,7 +1,7 @@
 {
   "shared_hp_pool": {
     "by_player_count": {
-      "1": { "initial_hp": 60, "enemy_hp_coeff": 0.4, "enemy_count_coeff": 0.5, "resource_drop_coeff": 1.2 },
+      "1": { "initial_hp": 50, "enemy_hp_coeff": 0.4, "enemy_count_coeff": 0.5, "resource_drop_coeff": 1.2 },
       "2": { "initial_hp": 75, "enemy_hp_coeff": 0.7, "enemy_count_coeff": 0.7, "resource_drop_coeff": 1.0 },
       "3": { "initial_hp": 90, "enemy_hp_coeff": 0.85, "enemy_count_coeff": 0.85, "resource_drop_coeff": 0.95 },
       "4": { "initial_hp": 100, "enemy_hp_coeff": 1.0, "enemy_count_coeff": 1.0, "resource_drop_coeff": 0.9 }

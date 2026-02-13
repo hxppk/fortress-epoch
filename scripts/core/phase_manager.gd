@@ -12,6 +12,7 @@ signal transition_started(duration: float)
 signal transition_tick(remaining: float)
 signal transition_ended()
 signal tutorial_message(text: String)
+signal countdown_tick(seconds_remaining: int)
 
 # ============================================================
 # 阶段常量（字符串枚举）
@@ -84,7 +85,9 @@ func start_game_flow() -> void:
 
 ## 进入指定阶段
 func enter_phase(phase_name: String, data: Dictionary = {}) -> void:
+	var prev_phase: String = current_phase
 	current_phase = phase_name
+	print("[PhaseManager] %s → %s" % [prev_phase if prev_phase != "" else "(init)", phase_name])
 	phase_changed.emit(phase_name, data)
 
 	match phase_name:
@@ -149,8 +152,15 @@ func _handle_prepare(_data: Dictionary) -> void:
 	if gm:
 		gm.game_state = "playing"
 
-	# 等 2 秒后自动进入防守阶段
-	await get_tree().create_timer(2.0).timeout
+	# 前 7 秒静默准备
+	await get_tree().create_timer(7.0).timeout
+
+	# 最后 3 秒倒计时: 3, 2, 1
+	for i in range(3, 0, -1):
+		countdown_tick.emit(i)
+		await get_tree().create_timer(1.0).timeout
+
+	countdown_tick.emit(0)  # 隐藏倒计时
 	enter_phase("defend")
 
 
@@ -179,19 +189,14 @@ func _handle_wave_clear(data: Dictionary) -> void:
 	# 2 秒奖励展示
 	await get_tree().create_timer(2.0).timeout
 
-	# 检查：如果有待处理的卡牌选择（城镇升级了）
-	if pending_card_selection:
-		pending_card_selection = false
-		enter_phase("card_selection", data)
+	# NEW: Check if expedition NPCs exist → enter attack mode
+	# The expedition_battle node checks and game_session handles the start
+	if _has_expedition_npcs():
+		enter_phase("expedition", data)
 		return
 
-	# 检查：是否所有波次已完成
-	if _wave_spawner and _wave_spawner.is_all_waves_complete():
-		_on_stage_completed()
-		return
-
-	# 否则继续下一波
-	enter_phase("prepare")
+	# Continue normal flow
+	_post_wave_clear_routing(data)
 
 
 ## 卡牌选择处理
@@ -216,7 +221,7 @@ func _handle_expedition(_data: Dictionary) -> void:
 	var gm: Node = _get_game_manager()
 	if gm:
 		gm.game_state = "expedition"
-	# 等待外部回调 on_expedition_completed()
+	# Actual battle managed by game_session via ExpeditionBattle
 
 
 ## BOSS 防守波处理
@@ -232,6 +237,7 @@ func _handle_boss(_data: Dictionary) -> void:
 
 ## 胜利处理
 func _handle_victory(_data: Dictionary) -> void:
+	print("[PhaseManager] 游戏胜利 — 触发结算")
 	var gm: Node = _get_game_manager()
 	if gm:
 		gm.end_game(true)
@@ -239,6 +245,7 @@ func _handle_victory(_data: Dictionary) -> void:
 
 ## 失败处理
 func _handle_defeat(_data: Dictionary) -> void:
+	print("[PhaseManager] 游戏失败 — 触发结算")
 	var gm: Node = _get_game_manager()
 	if gm:
 		gm.end_game(false)
@@ -287,8 +294,8 @@ func _on_stage_completed() -> void:
 
 	# 检查下一阶段是否存在
 	if current_stage_index + 1 < stages.size():
-		# 还有下一阶段 → 进入过渡
-		enter_phase("transition")
+		# 还有下一阶段 → 直接推进
+		_advance_to_next_stage()
 	else:
 		# 已是最后阶段 → 胜利
 		enter_phase("victory")
@@ -341,8 +348,8 @@ func _process(delta: float) -> void:
 
 ## 出征结束后调用
 func on_expedition_completed() -> void:
-	# 推进到下一阶段
-	_advance_to_next_stage()
+	is_transitioning = false
+	_post_wave_clear_routing()
 
 
 ## 卡牌选择完成后调用（由 game_session 在 card_selected 信号后调用）
@@ -354,6 +361,29 @@ func on_card_selection_done() -> void:
 
 	# 否则继续下一波
 	enter_phase("prepare")
+
+
+## Post-wave-clear decision routing (also called after expedition completes)
+func _post_wave_clear_routing(data: Dictionary = {}) -> void:
+	if pending_card_selection:
+		pending_card_selection = false
+		enter_phase("card_selection", data)
+		return
+
+	if _wave_spawner and _wave_spawner.is_all_waves_complete():
+		_on_stage_completed()
+		return
+
+	enter_phase("prepare")
+
+
+## Check if expedition NPCs exist in the heroes group
+func _has_expedition_npcs() -> bool:
+	var heroes: Array = get_tree().get_nodes_in_group("heroes")
+	for hero: Node in heroes:
+		if hero is NPCUnit:
+			return true
+	return false
 
 
 ## 检查即将开始的波次是否是 BOSS 波

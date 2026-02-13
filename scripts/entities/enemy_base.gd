@@ -235,10 +235,15 @@ func _move_toward_target(delta: float) -> void:
 func _on_reached_target() -> void:
 	reached_target.emit()
 
-	# 对堡垒造成伤害
-	var attack: float = stats.get_stat("attack")
-	GameManager.take_shared_damage(int(attack))
-	GameManager.record_damage(attack)
+	# 对堡垒造成伤害（每个敌人扣1点堡垒生命）
+	GameManager.take_shared_damage(1)
+	GameManager.record_damage(1)
+
+	# 红色闪屏警告
+	if CombatFeedback and CombatFeedback.has_method("screen_red_flash"):
+		CombatFeedback.screen_red_flash()
+	if CombatFeedback and CombatFeedback.has_method("fortress_flash"):
+		CombatFeedback.fortress_flash()
 
 	# 自毁
 	die()
@@ -299,7 +304,7 @@ func _drop_loot() -> void:
 	if loot.has("exp"):
 		var exp_amount: int = _calc_loot_amount(loot["exp"])
 		if exp_amount > 0:
-			GameManager.add_resource("exp", exp_amount)
+			GameManager.add_exp(exp_amount)
 
 
 ## 计算掉落数量：数组 [min, max] 随机，单值直接返回

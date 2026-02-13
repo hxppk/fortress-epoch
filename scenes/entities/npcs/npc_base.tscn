@@ -1,0 +1,38 @@
+[gd_scene load_steps=4 format=3 uid="uid://npc_base"]
+
+[ext_resource type="Script" path="res://scripts/entities/npc_base.gd" id="1_script"]
+[ext_resource type="Script" path="res://scripts/core/stats_component.gd" id="2_stats"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_body"]
+radius = 5.0
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_attack"]
+radius = 40.0
+
+[node name="NPCUnit" type="CharacterBody2D"]
+collision_layer = 1
+collision_mask = 2
+script = ExtResource("1_script")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_body")
+
+[node name="AttackArea" type="Area2D" parent="."]
+collision_layer = 0
+collision_mask = 2
+
+[node name="AttackRange" type="CollisionShape2D" parent="AttackArea"]
+shape = SubResource("CircleShape2D_attack")
+
+[node name="StatsComponent" type="Node" parent="."]
+script = ExtResource("2_stats")
+
+[node name="Label" type="Label" parent="."]
+offset_left = -24.0
+offset_top = -20.0
+offset_right = 24.0
+offset_bottom = -6.0
+horizontal_alignment = 1
+vertical_alignment = 1

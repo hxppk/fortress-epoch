@@ -108,10 +108,15 @@ func take_damage(amount: float) -> float:
 
 	var actual_damage: float = minf(amount, current_hp)
 	current_hp -= actual_damage
+
+	# 先将 HP 钳位到 0，再统一 emit，避免监听者收到负值
+	var is_dead: bool = current_hp <= 0.0
+	if is_dead:
+		current_hp = 0.0
+
 	health_changed.emit(current_hp, max_hp)
 
-	if current_hp <= 0.0:
-		current_hp = 0.0
+	if is_dead:
 		died.emit()
 
 	return actual_damage

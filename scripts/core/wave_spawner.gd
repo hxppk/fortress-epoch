@@ -302,22 +302,14 @@ func _spawn_enemy(type: String, route: String) -> void:
 
 ## 连接敌人死亡信号
 func _connect_enemy_death(enemy: Node2D) -> void:
-	if enemy.has_node("StatsComponent"):
-		var enemy_stats: StatsComponent = enemy.get_node("StatsComponent")
-		if not enemy_stats.died.is_connected(_on_enemy_stats_died.bind(enemy)):
-			enemy_stats.died.connect(_on_enemy_stats_died.bind(enemy))
-	elif enemy.has_signal("died"):
-		if not enemy.died.is_connected(_on_enemy_died.bind(enemy)):
-			enemy.died.connect(_on_enemy_died.bind(enemy))
+	# 连接 enemy_died 信号（die() 总是 emit，无论是 HP 归零还是到达堡垒）
+	if enemy.has_signal("enemy_died"):
+		if not enemy.enemy_died.is_connected(_on_enemy_died):
+			enemy.enemy_died.connect(_on_enemy_died)
 
 # ============================================================
 # 敌人死亡回调
 # ============================================================
-
-## 通过 StatsComponent.died 触发的死亡回调
-func _on_enemy_stats_died(enemy: Node2D) -> void:
-	_on_enemy_died(enemy)
-
 
 ## 敌人死亡处理
 func _on_enemy_died(enemy: Node2D) -> void:
@@ -384,7 +376,9 @@ func _distribute_rewards(rewards: Dictionary) -> void:
 
 	for resource_type: String in rewards:
 		var amount: int = int(rewards[resource_type])
-		if gm.has_method("add_resource"):
+		if resource_type == "exp" and gm.has_method("add_exp"):
+			gm.add_exp(amount)
+		elif gm.has_method("add_resource"):
 			gm.add_resource(resource_type, amount)
 
 

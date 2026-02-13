@@ -7,7 +7,7 @@
       "sprite": "res://assets/sprites/heroes/knight.png",
       "base_stats": {
         "hp": 120,
-        "attack": 18,
+        "attack": 9,
         "defense": 15,
         "speed": 100,
         "attack_speed": 1.0,
@@ -85,13 +85,13 @@
       "sprite": "res://assets/sprites/heroes/mage.png",
       "base_stats": {
         "hp": 70,
-        "attack": 10,
+        "attack": 5,
         "defense": 5,
         "speed": 90,
         "attack_speed": 0.8,
         "attack_range": 120,
         "crit_rate": 0.05,
-        "spell_power": 25
+        "spell_power": 13
       },
       "auto_attack": {
         "pattern": "aoe_impact",

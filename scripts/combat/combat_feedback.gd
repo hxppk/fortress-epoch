@@ -2,6 +2,28 @@ extends Node
 ## CombatFeedback — 战斗视觉反馈（闪白、屏幕震动、击杀粒子、弹性缩放）
 ## 可作为 Autoload 使用，也可挂载到场景中。
 
+# 音效
+var _hit_player: AudioStreamPlayer = null
+var _click_player: AudioStreamPlayer = null
+
+
+func _ready() -> void:
+	# 击中音效
+	_hit_player = AudioStreamPlayer.new()
+	var hit_stream = load("res://assets/audio/hit_004.ogg")
+	if hit_stream:
+		_hit_player.stream = hit_stream
+		_hit_player.volume_db = -5.0
+	add_child(_hit_player)
+
+	# UI 点击音效
+	_click_player = AudioStreamPlayer.new()
+	var click_stream = load("res://assets/audio/click_005.ogg")
+	if click_stream:
+		_click_player.stream = click_stream
+		_click_player.volume_db = -3.0
+	add_child(_click_player)
+
 # ============================================================
 # 闪白效果
 # ============================================================
@@ -97,6 +119,61 @@ func hit_scale_effect(sprite: Node2D) -> void:
 	var tween := sprite.create_tween()
 	tween.tween_property(sprite, "scale", original_scale * 1.8, 0.06).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
 	tween.tween_property(sprite, "scale", original_scale, 0.12).set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_BACK)
+
+# ============================================================
+# 音效播放
+# ============================================================
+
+## 播放敌人被击中音效
+func play_hit_sound() -> void:
+	if _hit_player and _hit_player.stream:
+		_hit_player.play()
+
+
+## 播放 UI 点击/悬停音效
+func play_click_sound() -> void:
+	if _click_player and _click_player.stream:
+		_click_player.play()
+
+# ============================================================
+# 红色闪屏（敌人入侵堡垒）
+# ============================================================
+
+## 全屏红色闪烁警告
+func screen_red_flash() -> void:
+	var tree := get_tree()
+	if tree == null or tree.current_scene == null:
+		return
+
+	# 创建全屏红色遮罩
+	var overlay := ColorRect.new()
+	overlay.color = Color(1.0, 0.0, 0.0, 0.35)
+	overlay.z_index = 200
+	overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# 全屏覆盖 — 放在 CanvasLayer 中确保覆盖整个视口
+	var canvas_layer := CanvasLayer.new()
+	canvas_layer.layer = 100
+	overlay.anchors_preset = Control.PRESET_FULL_RECT
+	canvas_layer.add_child(overlay)
+	tree.current_scene.add_child(canvas_layer)
+
+	# 0.25 秒淡出后销毁
+	var tween := overlay.create_tween()
+	tween.tween_property(overlay, "color:a", 0.0, 0.25)
+	tween.tween_callback(canvas_layer.queue_free)
+
+## 堡垒受击闪红
+func fortress_flash() -> void:
+	var tree := get_tree()
+	if tree == null or tree.current_scene == null:
+		return
+	var fortress_visual := tree.current_scene.get_node_or_null("Map/FortressCore/FortressVisual") as ColorRect
+	if fortress_visual == null:
+		return
+	var original_color: Color = Color(0.8, 0.65, 0.2, 1.0)
+	fortress_visual.color = Color(1.0, 0.2, 0.2, 1.0)
+	var tween := fortress_visual.create_tween()
+	tween.tween_property(fortress_visual, "color", original_color, 0.3)
 
 # ============================================================
 # 内部工具
