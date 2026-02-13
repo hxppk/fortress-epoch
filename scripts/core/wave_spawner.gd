@@ -85,6 +85,16 @@ func initialize(pool: Node, fortress_pos: Vector2) -> void:
 	fortress_position = fortress_pos
 	wave_data = _load_waves_data()
 
+	# 加载伤害倍率配置到 GameManager
+	var multipliers: Dictionary = wave_data.get("balance_multipliers", {})
+	if not multipliers.is_empty():
+		GameManager.load_balance_multipliers(multipliers)
+
+	# 加载共享血池配置到 GameManager
+	var hp_pool: Dictionary = wave_data.get("shared_hp_pool", {})
+	if hp_pool.has("by_player_count"):
+		GameManager.setup_shared_hp_by_players(GameManager.player_count, hp_pool["by_player_count"])
+
 
 ## 设置出生点位置
 func set_spawn_points(points: Dictionary) -> void:

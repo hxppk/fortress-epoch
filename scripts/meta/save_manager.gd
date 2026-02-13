@@ -6,6 +6,9 @@ const SAVE_PATH := "user://save_data.json"
 
 var progression: MetaProgression = null
 
+## 最近一次结算信息（供结算屏幕读取）
+var last_settle_info: Dictionary = {}
+
 
 func _ready() -> void:
 	progression = MetaProgression.new()
@@ -88,12 +91,24 @@ func settle_game(victory: bool, game_stats: Dictionary) -> void:
 
 	# 英雄获得局外经验（基于击杀数 + 波次数 × 5）
 	var hero_id: String = game_stats.get("hero_id", "wolf_knight")
+	var old_level: int = progression.get_hero_level(hero_id)
 	var hero_exp: int = game_stats.get("kills", 0) + game_stats.get("wave", 0) * 5
 	if victory:
 		hero_exp = roundi(hero_exp * 1.5)
 	progression.add_hero_exp(hero_id, hero_exp)
+	var new_level: int = progression.get_hero_level(hero_id)
 
-	print("[SaveManager] 结算完成 — crystal:%d badge:%d hero_exp:%d" % [crystal, badge, hero_exp])
+	# 记录结算信息供 UI 读取
+	last_settle_info = {
+		"hero_exp_gained": hero_exp,
+		"old_level": old_level,
+		"new_level": new_level,
+		"leveled_up": new_level > old_level,
+		"crystal_earned": crystal,
+		"badge_earned": badge,
+	}
+
+	print("[SaveManager] 结算完成 — crystal:%d badge:%d hero_exp:%d lv:%d→%d" % [crystal, badge, hero_exp, old_level, new_level])
 	save_data()
 
 
@@ -109,6 +124,24 @@ func get_hero_bonus(hero_id: String) -> Dictionary:
 ## 获取建筑研究等级
 func get_research_level(building_type: String) -> int:
 	return progression.get_research_level(building_type)
+
+
+## 升级研究并保存
+func upgrade_research(building_type: String) -> bool:
+	var success: bool = progression.upgrade_research(building_type)
+	if success:
+		save_data()
+	return success
+
+
+## 获取研究加成百分比
+func get_research_bonus(building_type: String) -> float:
+	return progression.get_research_bonus(building_type)
+
+
+## 获取研究升级费用
+func get_research_cost(building_type: String) -> int:
+	return progression.get_research_cost(building_type)
 
 
 # ============================================================

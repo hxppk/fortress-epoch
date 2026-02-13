@@ -46,6 +46,9 @@ func show_result(victory: bool, stats: Dictionary) -> void:
 	_add_stat_row("存活波次", str(stats.get("waves_survived", 0)))
 	_add_stat_row("城镇等级", "Lv.%d" % int(stats.get("town_level", 0)))
 
+	# 局外成长信息
+	_add_meta_progression_rows()
+
 	# 显示面板 + 入场动画
 	visible = true
 	dim_overlay.modulate = Color(1, 1, 1, 0)
@@ -85,6 +88,42 @@ func _add_stat_row(label_text: String, value_text: String) -> void:
 	hbox.add_child(val_label)
 
 	stats_container.add_child(hbox)
+
+
+## 显示局外成长结算行
+func _add_meta_progression_rows() -> void:
+	if not is_instance_valid(SaveManager):
+		return
+
+	var info: Dictionary = SaveManager.last_settle_info
+	if info.is_empty():
+		return
+
+	# 分隔线
+	var sep := HSeparator.new()
+	stats_container.add_child(sep)
+
+	# 获得经验
+	var exp_gained: int = info.get("hero_exp_gained", 0)
+	_add_stat_row("英雄经验", "+%d" % exp_gained)
+
+	# 英雄等级
+	var new_level: int = info.get("new_level", 1)
+	_add_stat_row("英雄等级", "Lv.%d" % new_level)
+
+	# 升级提示
+	if info.get("leveled_up", false):
+		var level_up_label := Label.new()
+		level_up_label.text = "LEVEL UP!"
+		level_up_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		level_up_label.add_theme_color_override("font_color", Color.GOLD)
+		level_up_label.add_theme_font_size_override("font_size", 24)
+		stats_container.add_child(level_up_label)
+
+		# 闪烁动画
+		var tween := create_tween().set_loops(3)
+		tween.tween_property(level_up_label, "modulate:a", 0.3, 0.3)
+		tween.tween_property(level_up_label, "modulate:a", 1.0, 0.3)
 
 
 ## 隐藏结算界面

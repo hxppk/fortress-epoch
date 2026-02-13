@@ -57,7 +57,7 @@ func _ready() -> void:
 			mine_btn.text = "金矿(50金)[2]"
 		if barracks_btn:
 			barracks_btn.pressed.connect(_on_build_barracks)
-			barracks_btn.text = "兵营(免费)[3]"
+			barracks_btn.text = "兵营(30金)[3]"
 
 	# 创建倒计时标签（HUD 中央偏上）
 	countdown_label = Label.new()
@@ -218,3 +218,32 @@ func show_countdown(seconds: int) -> void:
 	else:
 		countdown_label.text = str(seconds)
 		countdown_label.visible = true
+
+
+## 显示新手引导提示（居中大字，3 秒淡出）
+func show_tutorial_tip(text: String) -> void:
+	# 背景面板（不拦截鼠标事件）
+	var tip_panel := PanelContainer.new()
+	tip_panel.set_anchors_preset(Control.PRESET_CENTER)
+	tip_panel.offset_left = -200.0
+	tip_panel.offset_right = 200.0
+	tip_panel.offset_top = -40.0
+	tip_panel.offset_bottom = 40.0
+	tip_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(tip_panel)
+
+	# 文字标签（不拦截鼠标事件）
+	var tip_label := Label.new()
+	tip_label.text = text
+	tip_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	tip_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	tip_label.add_theme_font_size_override("font_size", 24)
+	tip_label.add_theme_color_override("font_color", Color.WHITE)
+	tip_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	tip_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	tip_panel.add_child(tip_label)
+
+	# Tween 淡出动画
+	var tween := create_tween()
+	tween.tween_property(tip_panel, "modulate:a", 0.0, 2.0).set_delay(3.0)
+	tween.tween_callback(tip_panel.queue_free)

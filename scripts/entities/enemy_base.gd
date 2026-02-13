@@ -172,6 +172,7 @@ func deactivate() -> void:
 	velocity = Vector2.ZERO
 	target = null
 	global_position = Vector2(-9999, -9999)
+	_stop_burn()  # 清除灼烧效果
 
 
 ## 重置为初始状态（对象池复用前调用）
@@ -191,6 +192,8 @@ func reset() -> void:
 
 	for i in range(_enrage_thresholds_triggered.size()):
 		_enrage_thresholds_triggered[i] = false
+
+	_stop_burn()  # 清除灼烧效果
 
 # ============================================================
 # 行为执行
@@ -391,6 +394,69 @@ func _on_stats_died() -> void:
 func _on_health_changed(_current: float, _maximum: float) -> void:
 	# 实时检查（behavior 相关逻辑在 _execute_behavior 中执行）
 	pass
+
+# ============================================================
+# 数据加载
+# ============================================================
+
+## 灼烧 DOT 相关变量
+var _burn_timer: Timer = null
+var _burn_damage: float = 0.0
+var _burn_ticks_remaining: int = 0
+var _burn_tick_interval: float = 1.0
+
+## 应用灼烧效果（不叠加，但刷新持续时间）
+func apply_burn(dot_damage: float, dot_duration: float, tick_interval: float) -> void:
+	if not is_active or not stats.is_alive():
+		return
+
+	_burn_damage = dot_damage
+	_burn_tick_interval = tick_interval
+	_burn_ticks_remaining = int(dot_duration / tick_interval)
+
+	# 如果已有灼烧 Timer，刷新即可
+	if _burn_timer != null and is_instance_valid(_burn_timer):
+		_burn_timer.stop()
+		_burn_timer.wait_time = tick_interval
+		_burn_timer.start()
+		return
+
+	# 创建新 Timer
+	_burn_timer = Timer.new()
+	_burn_timer.wait_time = tick_interval
+	_burn_timer.one_shot = false
+	add_child(_burn_timer)
+	_burn_timer.timeout.connect(_on_burn_tick)
+	_burn_timer.start()
+
+
+## 灼烧 tick 处理
+func _on_burn_tick() -> void:
+	if not is_active or not stats.is_alive():
+		_stop_burn()
+		return
+
+	if _burn_ticks_remaining <= 0:
+		_stop_burn()
+		return
+
+	# 造成真实伤害（无视防御）
+	stats.take_damage(_burn_damage)
+
+	# 简单的视觉提示：飘字
+	if DamageSystem and DamageSystem.has_method("create_damage_number"):
+		DamageSystem.create_damage_number(global_position, int(_burn_damage), false)
+
+	_burn_ticks_remaining -= 1
+
+
+## 停止灼烧效果
+func _stop_burn() -> void:
+	if _burn_timer != null and is_instance_valid(_burn_timer):
+		_burn_timer.stop()
+		_burn_timer.queue_free()
+		_burn_timer = null
+	_burn_ticks_remaining = 0
 
 # ============================================================
 # 数据加载

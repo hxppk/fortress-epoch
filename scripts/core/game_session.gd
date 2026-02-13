@@ -32,6 +32,7 @@ var expedition_battle: ExpeditionBattle = null
 @onready var minimap: Control = $UI/Minimap
 @onready var expedition_panel: Control = $UI/ExpeditionPanel
 @onready var result_screen: Control = $UI/ResultScreen
+var pause_menu: Control = null
 
 # 卡牌系统
 var card_pool: CardPool = null
@@ -139,6 +140,17 @@ func _setup_game() -> void:
 	if BuildingManager.has_signal("npc_spawn_triggered"):
 		BuildingManager.npc_spawn_triggered.connect(_on_npc_spawn_triggered)
 
+	# 实例化暂停菜单
+	var PauseMenuScene := preload("res://scenes/ui/pause_menu.tscn")
+	pause_menu = PauseMenuScene.instantiate()
+	ui_layer.add_child(pause_menu)
+	if pause_menu.has_signal("resume_requested"):
+		pause_menu.resume_requested.connect(_on_pause_resume)
+	if pause_menu.has_signal("restart_requested"):
+		pause_menu.restart_requested.connect(_on_pause_restart)
+	if pause_menu.has_signal("main_menu_requested"):
+		pause_menu.main_menu_requested.connect(_on_pause_main_menu)
+
 	# 生成英雄
 	_spawn_hero()
 
@@ -152,6 +164,12 @@ func _spawn_hero() -> void:
 	current_hero.global_position = fortress_position + Vector2(30, 0)
 	current_hero.initialize("wolf_knight")
 	current_hero.add_to_group("heroes")
+
+	# 应用局外加成（必须在 initialize 之后，因为 initialize 会 clear modifiers）
+	GameManager.apply_meta_bonuses_to_hero(current_hero)
+
+	# 开局加成通知
+	_show_meta_bonus_notification()
 
 	# 设置技能系统
 	skill_system = SkillSystem.new()
@@ -178,6 +196,15 @@ func _process(_delta: float) -> void:
 	var state: String = GameManager.game_state
 	if state in ["playing", "boss", "transition"]:
 		_handle_input()
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	# ESC: 优先取消建筑放置，否则弹暂停菜单
+	if event.is_action_pressed("ui_cancel"):
+		if tower_placement.is_placing:
+			tower_placement.cancel_placement()
+		else:
+			_handle_esc_pause()
 
 
 func _handle_input() -> void:
@@ -208,14 +235,13 @@ func _handle_input() -> void:
 			if skill_system.can_use_ultimate():
 				skill_system.use_ultimate()
 
-	# 建筑放置快捷键（数字键 1-3）— 仅在非放置模式时响应
-	if not tower_placement.is_placing:
-		if Input.is_key_pressed(KEY_1):
-			tower_placement.start_placement("arrow_tower")
-		elif Input.is_key_pressed(KEY_2):
-			tower_placement.start_placement("gold_mine")
-		elif Input.is_key_pressed(KEY_3):
-			tower_placement.start_placement("barracks")
+	# 建筑放置快捷键（数字键 1-3）— 放置中可切换建筑类型
+	if Input.is_key_pressed(KEY_1):
+		tower_placement.start_placement("arrow_tower")
+	elif Input.is_key_pressed(KEY_2):
+		tower_placement.start_placement("gold_mine")
+	elif Input.is_key_pressed(KEY_3):
+		tower_placement.start_placement("barracks")
 
 
 # ============================================================
@@ -259,9 +285,9 @@ func _handle_card_selection_phase() -> void:
 
 func _on_tutorial_message(text: String) -> void:
 	print("[GameSession] 引导提示: %s" % text)
-	# 复用 HUD 的波次信息显示引导文字
-	if hud and hud.has_method("update_wave_info"):
-		hud.update_wave_info(0, text)
+	# 调用 HUD 的 tutorial tip 显示
+	if hud and hud.has_method("show_tutorial_tip"):
+		hud.show_tutorial_tip(text)
 
 
 func _on_transition_tick(remaining: float) -> void:
@@ -663,3 +689,65 @@ func _spawn_npc(building_type: String) -> void:
 	npc.initialize(npc_type, npc_stats, center, attack_range, attack_pattern)
 	npc.add_to_group("heroes")
 	print("[GameSession] 自动生成 NPC: %s (建筑类型: %s)" % [npc_type, building_type])
+
+
+# ============================================================
+# 局外加成通知
+# ============================================================
+
+## 开局显示局外加成通知（有加成时 2 秒淡出）
+func _show_meta_bonus_notification() -> void:
+	if not is_instance_valid(SaveManager) or hud == null:
+		return
+
+	var bonus: Dictionary = SaveManager.get_hero_bonus("wolf_knight")
+	var pct: float = bonus.get("attack_pct", 0.0)
+	if pct <= 0.0:
+		return
+
+	var notification := Label.new()
+	notification.text = "局外加成: 全属性 +%.0f%%" % (pct * 100)
+	notification.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	notification.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	notification.add_theme_font_size_override("font_size", 20)
+	notification.add_theme_color_override("font_color", Color(0.5, 1.0, 0.5))
+	notification.add_theme_color_override("font_shadow_color", Color.BLACK)
+	notification.add_theme_constant_override("shadow_offset_x", 1)
+	notification.add_theme_constant_override("shadow_offset_y", 1)
+	notification.anchors_preset = Control.PRESET_CENTER_TOP
+	notification.offset_top = 50.0
+	notification.offset_left = -120.0
+	notification.offset_right = 120.0
+	hud.add_child(notification)
+
+	var tween := hud.create_tween()
+	tween.tween_property(notification, "modulate:a", 0.0, 2.0).set_delay(1.5)
+	tween.tween_callback(notification.queue_free)
+
+
+# ============================================================
+# 暂停菜单
+# ============================================================
+
+## 处理 ESC 暂停
+func _handle_esc_pause() -> void:
+	# 冲突处理：如果已有 UI 暂停，不弹出暂停菜单
+	var state: String = GameManager.game_state
+	if state not in ["playing", "defend"]:
+		return
+
+	# 显示暂停菜单
+	if pause_menu and pause_menu.has_method("show_pause_menu"):
+		pause_menu.show_pause_menu()
+
+
+func _on_pause_resume() -> void:
+	print("[GameSession] 暂停菜单: 继续游戏")
+
+
+func _on_pause_restart() -> void:
+	print("[GameSession] 暂停菜单: 重新开始")
+
+
+func _on_pause_main_menu() -> void:
+	print("[GameSession] 暂停菜单: 返回主菜单")

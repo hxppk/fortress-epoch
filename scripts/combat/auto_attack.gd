@@ -178,6 +178,10 @@ func _attack_aoe_impact() -> void:
 			total_damage += dmg
 			hit_targets.append(target)
 
+			# 流星法师被动：星火燎原（AOE 命中触发灼烧）
+			if owner_node and owner_node.has_method("trigger_starfire_spread"):
+				owner_node.trigger_starfire_spread(target)
+
 	# AOE 圈特效
 	_spawn_aoe_vfx(impact_pos)
 

@@ -8,6 +8,20 @@ const SAVE_VERSION: int = 1
 ## 英雄升级经验阈值（Lv1→Lv2 需 50 exp, Lv2→Lv3 需 120, ...）
 const HERO_EXP_THRESHOLDS: Array = [0, 50, 120, 250, 500]
 
+## 研究升级费用（水晶）：[Lv0→1, Lv1→2, Lv2→3]
+const RESEARCH_COSTS: Dictionary = {
+	"arrow_tower": [20, 60, 150],
+	"gold_mine": [20, 60, 150],
+	"barracks": [20, 60, 150],
+}
+
+## 研究效果：每级加成百分比
+const RESEARCH_EFFECTS: Dictionary = {
+	"arrow_tower": [0.10, 0.20, 0.35],
+	"gold_mine": [0.15, 0.30, 0.50],
+	"barracks": [0.10, 0.20, 0.35],
+}
+
 ## 存档数据
 var data: Dictionary = {}
 
@@ -111,11 +125,51 @@ func get_hero_level(hero_id: String) -> int:
 
 
 # ============================================================
-# 研究（预留接口）
+# 研究
 # ============================================================
 
 func get_research_level(building_type: String) -> int:
 	return data["research"].get(building_type, 0)
+
+
+## 升级研究，返回是否成功
+func upgrade_research(building_type: String) -> bool:
+	if not data["research"].has(building_type):
+		return false
+	var current_level: int = data["research"][building_type]
+	if current_level >= 3:
+		return false
+	var costs: Array = RESEARCH_COSTS.get(building_type, [])
+	if current_level >= costs.size():
+		return false
+	var cost: int = costs[current_level]
+	if not spend_currency("crystal", cost):
+		return false
+	data["research"][building_type] = current_level + 1
+	print("[MetaProgression] 研究升级: %s -> Lv.%d" % [building_type, current_level + 1])
+	return true
+
+
+## 获取研究加成百分比
+func get_research_bonus(building_type: String) -> float:
+	var level: int = get_research_level(building_type)
+	if level <= 0:
+		return 0.0
+	var effects: Array = RESEARCH_EFFECTS.get(building_type, [])
+	if level - 1 < effects.size():
+		return effects[level - 1]
+	return 0.0
+
+
+## 获取研究升级费用（-1 = 已满级）
+func get_research_cost(building_type: String) -> int:
+	var current_level: int = get_research_level(building_type)
+	if current_level >= 3:
+		return -1
+	var costs: Array = RESEARCH_COSTS.get(building_type, [])
+	if current_level < costs.size():
+		return costs[current_level]
+	return -1
 
 
 # ============================================================

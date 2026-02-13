@@ -49,6 +49,12 @@ var targets_in_range: Array = []
 ## 面朝方向（true = 右）
 var facing_right: bool = true
 
+## 被动技能数据
+var passive_skills: Array = []
+
+## 白狼骑士 - 嗜血本能：是否已激活低血攻击加成
+var _blood_instinct_active: bool = false
+
 # ============================================================
 # 常量
 # ============================================================
@@ -66,6 +72,11 @@ func _ready() -> void:
 
 	# 连接 StatsComponent 死亡信号
 	stats.died.connect(_on_stats_died)
+
+	# 连接击杀事件（用于白狼骑士被动回血）
+	if GameManager.has_signal("kill_recorded"):
+		if not GameManager.kill_recorded.is_connected(_on_kill_recorded):
+			GameManager.kill_recorded.connect(_on_kill_recorded)
 
 	# 如果编辑器中已设置 hero_id，自动初始化
 	if hero_id != "":
@@ -99,6 +110,9 @@ func _process(delta: float) -> void:
 	# 自动攻击计时
 	_process_auto_attack(delta)
 
+	# 被动技能检查
+	_process_passive_skills(delta)
+
 
 func _draw() -> void:
 	# 简单阴影：用多边形模拟椭圆
@@ -128,6 +142,9 @@ func initialize(id: String) -> void:
 	# 根据数据设置攻击范围
 	var attack_range: float = float(hero_data.get("base_stats", {}).get("attack_range", 40))
 	_set_attack_range(attack_range)
+
+	# 加载被动技能
+	_load_passive_skills()
 
 
 ## 设置移动方向（由外部 Controller 调用）
@@ -203,6 +220,11 @@ func _on_stats_died() -> void:
 	var tween: Tween = create_tween()
 	tween.tween_property(self, "modulate:a", 0.0, 0.5)
 	tween.tween_callback(queue_free)
+
+
+func _on_kill_recorded(_total_kills: int) -> void:
+	# 白狼骑士被动：击杀回血
+	trigger_blood_instinct_heal()
 
 # ============================================================
 # 私有方法
@@ -339,6 +361,8 @@ func _perform_aoe_attack(primary_target: Node2D, attack_data: Dictionary) -> voi
 		var dist: float = impact_pos.distance_to(target.global_position)
 		if dist <= aoe_radius:
 			_deal_damage_to(target, total_damage)
+			# 流星法师被动：星火燎原（命中附加灼烧）
+			trigger_starfire_spread(target)
 
 
 ## 单体攻击（默认）
@@ -347,27 +371,23 @@ func _perform_single_attack(target: Node2D) -> void:
 	_deal_damage_to(target, attack_value)
 
 
-## 对目标造成伤害
+## 对目标造成伤害 (统一使用 DamageSystem)
 func _deal_damage_to(target: Node2D, raw_damage: float) -> void:
 	if not is_instance_valid(target):
 		return
 
-	# 暴击判定
-	var crit_rate: float = stats.get_stat("crit_rate")
-	var is_crit: bool = randf() < crit_rate
-	var final_damage: float = raw_damage * (1.5 if is_crit else 1.0)
-
-	# 目标防御减伤
+	# 获取目标的 StatsComponent
+	var target_stats: StatsComponent = null
 	if target.has_node("StatsComponent"):
-		var target_stats: StatsComponent = target.get_node("StatsComponent")
-		var defense: float = target_stats.get_stat("defense")
-		# 简单减伤公式：实际伤害 = damage * (100 / (100 + defense))
-		final_damage = final_damage * (100.0 / (100.0 + defense))
-		target_stats.take_damage(final_damage)
+		target_stats = target.get_node("StatsComponent")
 
-	# 记录伤害到 GameManager
-	if GameManager.has_method("record_damage"):
-		GameManager.record_damage(final_damage)
+	if target_stats == null:
+		return
+
+	# 使用 DamageSystem 统一计算伤害
+	# raw_damage 作为 override_atk 传入（包含技能加成/法术强度等）
+	var damage_info: Dictionary = DamageSystem.calculate_damage(stats, target_stats, raw_damage)
+	DamageSystem.apply_damage(self, target, damage_info)
 
 
 ## 应用阈值效果
@@ -395,3 +415,84 @@ func _draw_shadow_ellipse(center: Vector2, radius: Vector2, color: Color) -> voi
 		points.append(point)
 
 	draw_colored_polygon(points, color)
+
+# ============================================================
+# 被动技能系统
+# ============================================================
+
+## 加载被动技能数据
+func _load_passive_skills() -> void:
+	passive_skills.clear()
+	_blood_instinct_active = false
+
+	if hero_data.is_empty() or not hero_data.has("skills"):
+		return
+
+	var skills: Array = hero_data["skills"]
+	for skill: Dictionary in skills:
+		if skill.get("type", "") == "passive":
+			passive_skills.append(skill)
+
+
+## 处理被动技能逻辑
+func _process_passive_skills(_delta: float) -> void:
+	if passive_skills.is_empty():
+		return
+
+	for skill: Dictionary in passive_skills:
+		var skill_id: String = skill.get("id", "")
+
+		match skill_id:
+			"blood_instinct":
+				_process_blood_instinct(skill)
+			# starfire_spread 是事件驱动，在 _perform_aoe_attack 中触发
+
+
+## 白狼骑士 - 嗜血本能
+func _process_blood_instinct(skill_data: Dictionary) -> void:
+	var trigger_hp_percent: float = skill_data.get("trigger_hp_percent", 0.3)
+	var attack_boost: float = skill_data.get("attack_boost", 0.4)
+
+	var current_hp_percent: float = stats.current_hp / stats.max_hp
+
+	# 检查是否应该激活
+	if current_hp_percent < trigger_hp_percent:
+		if not _blood_instinct_active:
+			# 激活低血加成
+			_blood_instinct_active = true
+			var boost_value: float = stats.get_base_stat("attack") * attack_boost
+			stats.add_modifier("attack", "blood_instinct", boost_value)
+	else:
+		if _blood_instinct_active:
+			# 移除低血加成
+			_blood_instinct_active = false
+			stats.remove_modifier("attack", "blood_instinct")
+
+
+## 白狼骑士 - 击杀回血（需要在击杀时调用）
+func trigger_blood_instinct_heal() -> void:
+	for skill: Dictionary in passive_skills:
+		if skill.get("id", "") == "blood_instinct":
+			var heal_amount: float = skill.get("heal_on_kill", 10)
+			stats.heal(heal_amount)
+			return
+
+
+## 流星法师 - 星火燎原（对目标施加灼烧）
+func trigger_starfire_spread(target: Node2D) -> void:
+	# 查找星火燎原技能数据
+	var starfire_data: Dictionary = {}
+	for skill: Dictionary in passive_skills:
+		if skill.get("id", "") == "starfire_spread":
+			starfire_data = skill
+			break
+
+	if starfire_data.is_empty():
+		return
+
+	# 对目标施加灼烧
+	if target.has_method("apply_burn"):
+		var dot_damage: float = starfire_data.get("dot_damage", 5)
+		var dot_duration: float = starfire_data.get("dot_duration", 3.0)
+		var dot_tick_interval: float = starfire_data.get("dot_tick_interval", 1.0)
+		target.apply_burn(dot_damage, dot_duration, dot_tick_interval)

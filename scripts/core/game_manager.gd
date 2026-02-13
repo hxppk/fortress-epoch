@@ -61,6 +61,13 @@ var exp_thresholds: Array = [0, 20, 70, 170, 370, 600]
 ## 累计经验
 var total_exp: int = 0
 
+## 伤害倍率配置（从 waves.json 加载）
+var balance_multipliers: Dictionary = {
+	"tower_damage": 1.0,
+	"hero_damage": 1.0,
+	"npc_damage": 1.0
+}
+
 # ============================================================
 # 生命周期
 # ============================================================
@@ -164,8 +171,7 @@ func start_game() -> void:
 	game_state = "playing"
 	shared_hp_changed.emit(shared_hp, max_shared_hp)
 
-	# 读取局外加成（预留，当前加成为 0）
-	_apply_meta_bonuses()
+	# 局外加成在英雄生成后由 GameSession 调用 apply_meta_bonuses_to_hero()
 
 
 ## 结束游戏
@@ -186,6 +192,33 @@ func setup_shared_hp_by_players(player_count_val: int, hp_config: Dictionary) ->
 		max_shared_hp = int(cfg.get("initial_hp", 20))
 		shared_hp = max_shared_hp
 		shared_hp_changed.emit(shared_hp, max_shared_hp)
+
+
+## 加载伤害倍率配置（从 waves.json 的 balance_multipliers 读取）
+func load_balance_multipliers(multipliers_config: Dictionary) -> void:
+	if multipliers_config.is_empty():
+		return
+
+	if multipliers_config.has("tower_damage"):
+		balance_multipliers["tower_damage"] = float(multipliers_config.get("tower_damage", 1.0))
+	if multipliers_config.has("hero_damage"):
+		balance_multipliers["hero_damage"] = float(multipliers_config.get("hero_damage", 1.0))
+	if multipliers_config.has("npc_damage"):
+		balance_multipliers["npc_damage"] = float(multipliers_config.get("npc_damage", 1.0))
+
+
+## 获取伤害倍率（供 DamageSystem 调用）
+## attacker_type: "hero" | "tower" | "npc"
+func get_damage_multiplier(attacker_type: String) -> float:
+	match attacker_type:
+		"hero":
+			return balance_multipliers.get("hero_damage", 1.0)
+		"tower":
+			return balance_multipliers.get("tower_damage", 1.0)
+		"npc":
+			return balance_multipliers.get("npc_damage", 1.0)
+		_:
+			return 1.0
 
 
 ## 激活背水一战 buff -- 为所有英雄增加攻击力 +20%
@@ -289,19 +322,36 @@ func _settle_to_meta(victory: bool) -> void:
 	SaveManager.settle_game(victory, game_stats)
 
 
-## 读取局外加成并应用（预留接口，当前加成为 0）
-func _apply_meta_bonuses() -> void:
+## 应用局外加成到英雄（在英雄生成并 initialize 之后调用）
+func apply_meta_bonuses_to_hero(hero: Node) -> void:
 	if not is_instance_valid(SaveManager):
 		return
+	if not hero.has_node("StatsComponent"):
+		return
 
+	var stats: StatsComponent = hero.get_node("StatsComponent")
 	var bonus: Dictionary = SaveManager.get_hero_bonus(current_hero_id)
 	if bonus.is_empty():
 		return
 
-	# 预留：将在英雄生成后通过 StatsComponent 应用加成
-	# 目前仅打印日志
 	var atk_pct: float = bonus.get("attack_pct", 0.0)
+	var hp_pct: float = bonus.get("hp_pct", 0.0)
+	var def_pct: float = bonus.get("defense_pct", 0.0)
+
 	if atk_pct > 0.0:
-		print("[GameManager] 局外加成 — attack:+%.0f%% hp:+%.0f%% def:+%.0f%%" % [
-			atk_pct * 100, bonus.get("hp_pct", 0.0) * 100, bonus.get("defense_pct", 0.0) * 100
+		var base_atk: float = float(stats.base_stats.get("attack", 0))
+		stats.add_modifier("attack", "meta_bonus", base_atk * atk_pct)
+	if hp_pct > 0.0:
+		var base_hp: float = float(stats.base_stats.get("hp", 0))
+		stats.add_modifier("hp", "meta_bonus", base_hp * hp_pct)
+		# 满血开局
+		stats.current_hp = stats.max_hp
+		stats.health_changed.emit(stats.current_hp, stats.max_hp)
+	if def_pct > 0.0:
+		var base_def: float = float(stats.base_stats.get("defense", 0))
+		stats.add_modifier("defense", "meta_bonus", base_def * def_pct)
+
+	if atk_pct > 0.0 or hp_pct > 0.0 or def_pct > 0.0:
+		print("[GameManager] 局外加成已应用 — attack:+%.0f%% hp:+%.0f%% def:+%.0f%%" % [
+			atk_pct * 100, hp_pct * 100, def_pct * 100
 		])

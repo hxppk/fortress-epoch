@@ -371,9 +371,36 @@ func _update_level_data() -> void:
 	var levels: Array = building_data.get("levels", [])
 	var level_index: int = current_level - 1  # 等级从 1 开始，数组从 0 开始
 	if level_index >= 0 and level_index < levels.size():
-		level_data = levels[level_index]
+		level_data = levels[level_index].duplicate(true)  # 深拷贝，防止研究加成修改原始数据
 	else:
 		level_data = {}
+
+	# 应用局外研究加成
+	_apply_research_bonus()
+
+
+## 应用研究加成到 level_data
+func _apply_research_bonus() -> void:
+	if level_data.is_empty() or building_id == "":
+		return
+	if not is_instance_valid(SaveManager):
+		return
+
+	var bonus: float = SaveManager.get_research_bonus(building_id)
+	if bonus <= 0.0:
+		return
+
+	match building_id:
+		"arrow_tower":
+			if level_data.has("damage"):
+				level_data["damage"] = roundi(float(level_data["damage"]) * (1.0 + bonus))
+		"gold_mine":
+			if level_data.has("production"):
+				level_data["production"] = roundi(float(level_data["production"]) * (1.0 + bonus))
+		"barracks":
+			for key: String in ["phys_attack_bonus", "magic_attack_bonus", "hp_bonus", "armor_bonus"]:
+				if level_data.has(key):
+					level_data[key] = roundi(float(level_data[key]) * (1.0 + bonus))
 
 
 ## 更新等级标签

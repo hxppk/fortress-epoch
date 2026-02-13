@@ -1,10 +1,15 @@
 {
+  "balance_multipliers": {
+    "tower_damage": 1.6,
+    "hero_damage": 0.75,
+    "npc_damage": 1.6
+  },
   "shared_hp_pool": {
     "by_player_count": {
-      "1": { "initial_hp": 50, "enemy_hp_coeff": 0.4, "enemy_count_coeff": 0.5, "resource_drop_coeff": 1.2 },
-      "2": { "initial_hp": 75, "enemy_hp_coeff": 0.7, "enemy_count_coeff": 0.7, "resource_drop_coeff": 1.0 },
-      "3": { "initial_hp": 90, "enemy_hp_coeff": 0.85, "enemy_count_coeff": 0.85, "resource_drop_coeff": 0.95 },
-      "4": { "initial_hp": 100, "enemy_hp_coeff": 1.0, "enemy_count_coeff": 1.0, "resource_drop_coeff": 0.9 }
+      "1": { "initial_hp": 120, "enemy_hp_coeff": 0.55, "enemy_count_coeff": 0.6, "resource_drop_coeff": 1.15 },
+      "2": { "initial_hp": 150, "enemy_hp_coeff": 0.75, "enemy_count_coeff": 0.75, "resource_drop_coeff": 1.0 },
+      "3": { "initial_hp": 170, "enemy_hp_coeff": 0.85, "enemy_count_coeff": 0.85, "resource_drop_coeff": 0.95 },
+      "4": { "initial_hp": 200, "enemy_hp_coeff": 1.0, "enemy_count_coeff": 1.0, "resource_drop_coeff": 0.9 }
     },
     "last_stand_threshold": 0.30,
     "last_stand_attack_bonus": 0.20
@@ -24,7 +29,7 @@
           "spawn_routes": ["north"],
           "duration": 20,
           "rewards": { "gold": 100, "exp": 20 },
-          "tutorial_text": "点击屏幕移动英雄，消灭所有史莱姆！"
+          "tutorial_text": "WASD 移动英雄，消灭所有史莱姆！"
         },
         {
           "id": "wave_1_2",
@@ -34,8 +39,9 @@
           ],
           "spawn_routes": ["north"],
           "duration": 30,
-          "rewards": { "gold": 20, "crystal": 20, "badge": 10, "exp": 50 },
-          "tutorial_text": "哥布林比史莱姆更强，注意走位！"
+          "rewards": { "gold": 60, "crystal": 20, "badge": 10, "exp": 50 },
+          "tutorial_text": "按 1/2/3 放置建筑，鼠标左键确认",
+          "prepare_tutorial": "建议先建金矿，保障经济！"
         }
       ]
     },
@@ -53,7 +59,7 @@
           ],
           "spawn_routes": ["north"],
           "duration": 30,
-          "rewards": { "gold": 30, "exp": 30 }
+          "rewards": { "gold": 50, "exp": 30 }
         },
         {
           "id": "wave_2_2",
@@ -103,7 +109,7 @@
             { "type": "skeleton", "count": 0, "spawn_continuous": true, "spawn_rate": 5, "spawn_interval": 12 }
           ],
           "spawn_routes": ["north", "east"],
-          "duration": 90,
+          "duration": 60,
           "rewards": { "gold": 150, "crystal": 15, "badge": 5, "exp": 150 }
         }
       ]

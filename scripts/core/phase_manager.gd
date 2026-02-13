@@ -152,6 +152,15 @@ func _handle_prepare(_data: Dictionary) -> void:
 	if gm:
 		gm.game_state = "playing"
 
+	# 发送准备阶段的 tutorial 消息（如果有）
+	if current_phase == "prepare" and _wave_spawner:
+		var next_wave_index: int = _wave_spawner.current_wave_index
+		if next_wave_index < _current_stage_waves.size():
+			var wave_data: Dictionary = _current_stage_waves[next_wave_index]
+			var prepare_text: String = wave_data.get("prepare_tutorial", "")
+			if prepare_text != "":
+				tutorial_message.emit(prepare_text)
+
 	# 前 7 秒静默准备
 	await get_tree().create_timer(7.0).timeout
 
