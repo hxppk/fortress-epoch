@@ -161,6 +161,15 @@ func on_wave_started(wave_index: int, wave_label: String) -> void:
 # ============================================================
 
 func on_expedition_started(expedition_id: String, expedition_manager: ExpeditionManager) -> void:
+	# 隐藏建筑按钮
+	if hud and hud.has_method("set_build_buttons_visible"):
+		hud.set_build_buttons_visible(false)
+
+	# 连接倒计时信号 → 底部条
+	if expedition_manager.has_signal("expedition_timer_tick"):
+		if not expedition_manager.expedition_timer_tick.is_connected(_on_expedition_timer_tick):
+			expedition_manager.expedition_timer_tick.connect(_on_expedition_timer_tick)
+
 	var exp_name: String = ""
 	for ed: Dictionary in expedition_manager.all_expeditions:
 		if ed.get("id", "") == expedition_id:
@@ -189,6 +198,14 @@ func on_expedition_completed(success: bool, rewards: Dictionary) -> void:
 func on_expedition_result_dismissed() -> void:
 	if expedition_panel:
 		expedition_panel.hide_panel()
+	# 恢复建筑按钮
+	if hud and hud.has_method("set_build_buttons_visible"):
+		hud.set_build_buttons_visible(true)
+
+
+func _on_expedition_timer_tick(remaining: float, _phase_index: int) -> void:
+	if expedition_panel and expedition_panel.has_method("update_timer"):
+		expedition_panel.update_timer(remaining)
 
 
 func on_support_used(remaining: int) -> void:

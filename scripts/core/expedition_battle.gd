@@ -63,9 +63,6 @@ var _has_boss_target: bool = false
 ## UI 节点
 var _background: ColorRect = null
 var _ui_layer: CanvasLayer = null
-var _title_label: Label = null
-var _timer_label: Label = null
-var _phase_label: Label = null
 var _status_label: Label = null
 
 ## 敌人目标位置（NPC 的战斗位置）
@@ -173,11 +170,9 @@ func _on_phase_changed(phase_index: int, phase_name: String, description: String
 	# 清除上一阶段的敌人和城堡
 	_clear_phase_entities()
 
-	# 更新 UI
-	if _phase_label:
-		_phase_label.text = "阶段 %d/3: %s" % [phase_index + 1, phase_name]
+	# 更新状态标签
 	if _status_label:
-		_status_label.text = description
+		_status_label.text = "阶段 %d/3: %s" % [phase_index + 1, phase_name]
 
 	# 加载新阶段的敌人生成数据
 	if _expedition_manager:
@@ -385,10 +380,9 @@ func _on_expedition_completed(expedition_id: String, success: bool, rewards: Dic
 	_end_battle("victory" if success else "defeat")
 
 
-## 当 ExpeditionManager 发出计时器 tick
-func _on_timer_tick(remaining: float, phase_index: int) -> void:
-	if _timer_label:
-		_timer_label.text = "剩余: %ds" % ceili(maxf(remaining, 0.0))
+## 当 ExpeditionManager 发出计时器 tick（UI 已移至 ExpeditionPanel 底部条）
+func _on_timer_tick(_remaining: float, _phase_index: int) -> void:
+	pass
 
 
 ## 结束战斗
@@ -569,56 +563,23 @@ func _restore_npcs() -> void:
 # UI
 # ============================================================
 
-## 创建出征战斗 UI
+## 创建出征战斗 UI（精简：仅保留目标 HP 浮标）
 func _create_battle_ui() -> void:
 	_ui_layer = CanvasLayer.new()
 	_ui_layer.layer = 10
 	add_child(_ui_layer)
 
-	# 标题 "出征模式"
-	_title_label = Label.new()
-	_title_label.text = "出征模式"
-	_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_title_label.add_theme_font_size_override("font_size", 28)
-	_title_label.add_theme_color_override("font_color", Color(1.0, 0.8, 0.2))
-	_title_label.add_theme_color_override("font_shadow_color", Color.BLACK)
-	_title_label.add_theme_constant_override("shadow_offset_x", 2)
-	_title_label.add_theme_constant_override("shadow_offset_y", 2)
-	_title_label.position = Vector2(380, 10)
-	_title_label.size = Vector2(200, 40)
-	_ui_layer.add_child(_title_label)
-
-	# 阶段信息
-	_phase_label = Label.new()
-	_phase_label.text = "阶段 1/3"
-	_phase_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_phase_label.add_theme_font_size_override("font_size", 18)
-	_phase_label.add_theme_color_override("font_color", Color(0.9, 0.9, 0.5))
-	_phase_label.position = Vector2(380, 45)
-	_phase_label.size = Vector2(200, 25)
-	_ui_layer.add_child(_phase_label)
-
-	# 倒计时
-	_timer_label = Label.new()
-	_timer_label.text = "剩余: --s"
-	_timer_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_timer_label.add_theme_font_size_override("font_size", 22)
-	_timer_label.add_theme_color_override("font_color", Color.WHITE)
-	_timer_label.add_theme_color_override("font_shadow_color", Color.BLACK)
-	_timer_label.add_theme_constant_override("shadow_offset_x", 1)
-	_timer_label.add_theme_constant_override("shadow_offset_y", 1)
-	_timer_label.position = Vector2(400, 70)
-	_timer_label.size = Vector2(160, 30)
-	_ui_layer.add_child(_timer_label)
-
-	# 状态说明
+	# 目标 HP 状态（屏幕中上方，不遮挡战斗）
 	_status_label = Label.new()
 	_status_label.text = "准备战斗..."
 	_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_status_label.add_theme_font_size_override("font_size", 16)
-	_status_label.add_theme_color_override("font_color", Color(0.8, 0.8, 0.8))
-	_status_label.position = Vector2(300, 500)
-	_status_label.size = Vector2(360, 30)
+	_status_label.add_theme_color_override("font_color", Color(1.0, 0.8, 0.2))
+	_status_label.add_theme_color_override("font_shadow_color", Color.BLACK)
+	_status_label.add_theme_constant_override("shadow_offset_x", 1)
+	_status_label.add_theme_constant_override("shadow_offset_y", 1)
+	_status_label.position = Vector2(160, 12)
+	_status_label.size = Vector2(200, 24)
 	_ui_layer.add_child(_status_label)
 
 
@@ -634,9 +595,6 @@ func _remove_battle_ui() -> void:
 	if _ui_layer != null and is_instance_valid(_ui_layer):
 		_ui_layer.queue_free()
 		_ui_layer = null
-	_title_label = null
-	_timer_label = null
-	_phase_label = null
 	_status_label = null
 
 # ============================================================

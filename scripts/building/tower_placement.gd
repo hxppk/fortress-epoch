@@ -340,7 +340,10 @@ func _show_insufficient_funds_tip(building_type: String, cost: Dictionary) -> vo
 		cost_text += "%s %d/%d " % [res_type, have, needed]
 
 	var label := Label.new()
-	label.text = "金币不足！%s 需要 %s" % [display_name, cost_text.strip_edges()]
+	var res_names: Dictionary = {"gold": "金币", "exp": "经验", "crystal": "水晶"}
+	var first_res: String = cost.keys()[0] if cost.size() > 0 else "gold"
+	var res_display: String = res_names.get(first_res, first_res)
+	label.text = "%s不足！%s 需要 %s" % [res_display, display_name, cost_text.strip_edges()]
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.add_theme_font_size_override("font_size", 16)
 	label.add_theme_color_override("font_color", Color(1.0, 0.4, 0.4))

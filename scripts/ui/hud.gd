@@ -88,7 +88,7 @@ func _ready() -> void:
 			mine_btn.text = "金矿(50金)[2]"
 		if barracks_btn:
 			barracks_btn.pressed.connect(_on_build_barracks)
-			barracks_btn.text = "兵营(30金)[3]"
+			barracks_btn.text = "兵营(30经验)[3]"
 
 	# 创建倒计时标签（HUD 中央偏上）
 	countdown_label = Label.new()
@@ -336,6 +336,12 @@ func _get_tower_placement() -> Node:
 	if session and session.has_node("TowerPlacement"):
 		return session.get_node("TowerPlacement")
 	return null
+
+
+## 显示/隐藏建筑快捷按钮（出征时隐藏）
+func set_build_buttons_visible(vis: bool) -> void:
+	if build_buttons:
+		build_buttons.visible = vis
 
 
 ## 显示/隐藏波次倒计时

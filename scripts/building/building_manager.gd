@@ -31,6 +31,14 @@ var npc_spawned: Dictionary = {}
 # 公有方法
 # ============================================================
 
+## 重置所有状态（新局开始时调用）
+func reset() -> void:
+	buildings.clear()
+	building_counts.clear()
+	npc_spawned.clear()
+	kill_gold_bonus = 0.0
+
+
 ## 注册新放置的建筑
 func register_building(building: Node) -> void:
 	if buildings.has(building):

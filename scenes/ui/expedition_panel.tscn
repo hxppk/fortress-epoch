@@ -1,99 +1,108 @@
-[gd_scene load_steps=3 format=3 uid="uid://expedition_panel"]
+[gd_scene load_steps=4 format=3 uid="uid://expedition_panel"]
 
 [ext_resource type="Script" path="res://scripts/ui/expedition_ui.gd" id="1_expedition_ui"]
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bg"]
-bg_color = Color(0.08, 0.08, 0.12, 0.9)
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_overlay"]
+bg_color = Color(0.05, 0.05, 0.1, 0.88)
 border_width_left = 1
 border_width_top = 1
 border_width_right = 1
 border_width_bottom = 1
-border_color = Color(0.4, 0.4, 0.5, 0.8)
-corner_radius_top_left = 4
-corner_radius_top_right = 4
-corner_radius_bottom_right = 4
-corner_radius_bottom_left = 4
-content_margin_left = 10.0
-content_margin_top = 8.0
-content_margin_right = 10.0
-content_margin_bottom = 8.0
+border_color = Color(0.4, 0.4, 0.6, 0.8)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+content_margin_left = 12.0
+content_margin_top = 10.0
+content_margin_right = 12.0
+content_margin_bottom = 10.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bar"]
+bg_color = Color(0.08, 0.06, 0.04, 0.92)
+border_width_top = 1
+border_color = Color(0.6, 0.5, 0.2, 0.8)
+content_margin_left = 8.0
+content_margin_top = 3.0
+content_margin_right = 8.0
+content_margin_bottom = 3.0
 
 [node name="ExpeditionPanel" type="Control"]
 layout_mode = 3
-anchors_preset = -1
-anchor_left = 0.65
-anchor_top = 0.05
+anchors_preset = 15
 anchor_right = 1.0
-anchor_bottom = 0.95
-grow_horizontal = 2
-grow_vertical = 2
+anchor_bottom = 1.0
+mouse_filter = 2
 script = ExtResource("1_expedition_ui")
 
-[node name="Background" type="PanelContainer" parent="."]
+[node name="SelectionOverlay" type="PanelContainer" parent="."]
+visible = false
 layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
+anchor_left = 0.2
+anchor_top = 0.15
+anchor_right = 0.8
+anchor_bottom = 0.85
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_bg")
+theme_override_styles/panel = SubResource("StyleBoxFlat_overlay")
 
-[node name="SelectionPanel" type="VBoxContainer" parent="."]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_left = 12.0
-offset_top = 10.0
-offset_right = -12.0
-offset_bottom = -10.0
-grow_horizontal = 2
-grow_vertical = 2
-theme_override_constants/separation = 8
+[node name="SelectContent" type="VBoxContainer" parent="SelectionOverlay"]
+layout_mode = 2
+theme_override_constants/separation = 10
 
-[node name="SelectTitle" type="Label" parent="SelectionPanel"]
+[node name="SelectTitle" type="Label" parent="SelectionOverlay/SelectContent"]
 layout_mode = 2
 text = "选择出征目标"
 horizontal_alignment = 1
 
-[node name="ProgressPanel" type="VBoxContainer" parent="."]
+[node name="BottomBar" type="PanelContainer" parent="."]
 visible = false
 layout_mode = 1
-anchors_preset = 15
+anchor_left = 0.0
+anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 12.0
-offset_top = 10.0
-offset_right = -12.0
-offset_bottom = -10.0
+offset_top = -40.0
 grow_horizontal = 2
-grow_vertical = 2
-theme_override_constants/separation = 8
+theme_override_styles/panel = SubResource("StyleBoxFlat_bar")
 
-[node name="TitleLabel" type="Label" parent="ProgressPanel"]
+[node name="BarContent" type="HBoxContainer" parent="BottomBar"]
 layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="InfoLabel" type="Label" parent="BottomBar/BarContent"]
+layout_mode = 2
+custom_minimum_size = Vector2(130, 0)
 text = "出征中..."
-horizontal_alignment = 1
+add_theme_font_size_override = 14
 
-[node name="ProgressBar" type="ProgressBar" parent="ProgressPanel"]
+[node name="ProgressBar" type="ProgressBar" parent="BottomBar/BarContent"]
 layout_mode = 2
+size_flags_horizontal = 3
+custom_minimum_size = Vector2(60, 0)
 max_value = 100.0
 value = 0.0
 
-[node name="NarrationLabel" type="Label" parent="ProgressPanel"]
-custom_minimum_size = Vector2(0, 60)
+[node name="TimerLabel" type="Label" parent="BottomBar/BarContent"]
 layout_mode = 2
-text = ""
-autowrap_mode = 2
-vertical_alignment = 1
+custom_minimum_size = Vector2(45, 0)
+text = "--s"
+horizontal_alignment = 1
 
-[node name="SupportButton" type="Button" parent="ProgressPanel"]
-layout_mode = 2
-text = "远程支援 (2)"
-
-[node name="ResultLabel" type="Label" parent="ProgressPanel"]
+[node name="ResultOverlay" type="PanelContainer" parent="."]
 visible = false
+layout_mode = 1
+anchor_left = 0.2
+anchor_top = 0.2
+anchor_right = 0.8
+anchor_bottom = 0.8
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_overlay")
+
+[node name="ResultLabel" type="Label" parent="ResultOverlay"]
 layout_mode = 2
 text = ""
 autowrap_mode = 2
 horizontal_alignment = 1
+vertical_alignment = 1

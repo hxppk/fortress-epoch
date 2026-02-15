@@ -48,6 +48,7 @@ func _ready() -> void:
 
 func _setup_game() -> void:
 	GameManager.start_game()
+	BuildingManager.reset()
 
 	# 基础系统初始化
 	enemy_pool.initialize(enemies_node)

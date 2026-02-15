@@ -243,6 +243,7 @@ func add_exp(amount: int) -> void:
 		bonus_mult += mods.get("exp_gain_bonus", 0.0)
 	var final_amount: int = maxi(roundi(float(amount) * bonus_mult), 1)
 	total_exp += final_amount
+	add_resource("exp", final_amount)
 	_check_town_level_up()
 
 	# 计算下一级阈值用于 UI 显示

@@ -108,6 +108,9 @@ func load_stage(stage_id: String) -> void:
 	_all_completed = false
 	is_spawning = false
 	spawn_timers.clear()
+	active_enemies = 0
+	_total_to_spawn = 0
+	_total_spawned = 0
 
 	# 在 stages 列表中查找匹配的阶段
 	var stages: Array = wave_data.get("stages", [])
@@ -372,6 +375,13 @@ func _check_wave_complete() -> void:
 	# 条件：所有固定敌人已生成完毕 + 没有存活敌人（持续生成的波在 active_enemies==0 时也算完成）
 	if not _check_all_spawned():
 		return
+
+	# 安全兜底：验证 active_enemies 计数与实际存活敌人一致
+	if active_enemies > 0:
+		var real_count: int = _count_alive_enemies()
+		if real_count != active_enemies:
+			push_warning("WaveSpawner: active_enemies 计数偏差 (%d → %d)，已修正" % [active_enemies, real_count])
+			active_enemies = real_count
 	if active_enemies > 0:
 		return
 
@@ -474,6 +484,21 @@ func _get_next_route(entry: Dictionary, routes: Array) -> String:
 	var idx: int = entry.get("route_index", 0) % routes.size()
 	entry["route_index"] = idx + 1
 	return routes[idx]
+
+
+## 统计场景中实际存活的敌人数量（安全兜底用）
+func _count_alive_enemies() -> int:
+	var tree := get_tree()
+	if tree == null:
+		return 0
+	var count: int = 0
+	var enemies: Array[Node] = tree.get_nodes_in_group("enemies")
+	for node: Node in enemies:
+		if node is EnemyBase:
+			var enemy: EnemyBase = node as EnemyBase
+			if enemy.is_active and enemy.stats and enemy.stats.is_alive():
+				count += 1
+	return count
 
 
 ## 获取 GameManager 引用
