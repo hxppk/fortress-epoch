@@ -198,13 +198,7 @@ func _handle_wave_clear(data: Dictionary) -> void:
 	# 2 秒奖励展示
 	await get_tree().create_timer(2.0).timeout
 
-	# NEW: Check if expedition NPCs exist → enter attack mode
-	# The expedition_battle node checks and game_session handles the start
-	if _has_expedition_npcs():
-		enter_phase("expedition", data)
-		return
-
-	# Continue normal flow
+	# 正常流程：检查卡牌选择 / 阶段完成 / 下一波
 	_post_wave_clear_routing(data)
 
 
@@ -301,12 +295,15 @@ func _on_stage_completed() -> void:
 		_advance_to_next_stage()
 		return
 
+	# 非教学阶段完成后，如果有 NPC 可以出征 → 进入过渡阶段（选择出征）
+	if _has_expedition_npcs():
+		enter_phase("transition")
+		return
+
 	# 检查下一阶段是否存在
 	if current_stage_index + 1 < stages.size():
-		# 还有下一阶段 → 直接推进
 		_advance_to_next_stage()
 	else:
-		# 已是最后阶段 → 胜利
 		enter_phase("victory")
 
 
@@ -358,7 +355,11 @@ func _process(delta: float) -> void:
 ## 出征结束后调用
 func on_expedition_completed() -> void:
 	is_transitioning = false
-	_post_wave_clear_routing()
+	# 出征结束后推进到下一阶段
+	if current_stage_index + 1 < stages.size():
+		_advance_to_next_stage()
+	else:
+		enter_phase("victory")
 
 
 ## 卡牌选择完成后调用（由 game_session 在 card_selected 信号后调用）
