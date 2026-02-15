@@ -15,7 +15,7 @@ signal resource_produced(type: String, amount: int)
 # 导出属性
 # ============================================================
 
-## 建筑类型 ID："arrow_tower" | "gold_mine" | "barracks"
+## 建筑类型 ID："arrow_tower" | "gold_mine" | "barracks" | "tech_forge"
 @export var building_id: String = ""
 
 ## 当前等级（1-3）
@@ -85,7 +85,7 @@ func _process(delta: float) -> void:
 			_tower_attack(delta)
 		"gold_mine":
 			_mine_produce(delta)
-		# barracks 不需要每帧逻辑，buff 在升级时一次性应用
+		# barracks / tech_forge 不需要每帧逻辑，效果在放置/升级时一次性应用
 
 # ============================================================
 # 公有方法
@@ -114,7 +114,7 @@ func initialize(id: String) -> void:
 		var range_radius: float = float(level_data.get("range", 96))
 		_set_attack_range(range_radius)
 	else:
-		# 金矿和兵营不需要攻击区域
+		# 金矿、兵营、铸造所不需要攻击区域
 		attack_area.monitoring = false
 		attack_area.monitorable = false
 		attack_range_shape.disabled = true
@@ -131,6 +131,10 @@ func place_at(grid_pos: Vector2i, world_pos: Vector2) -> void:
 	# 兵营放置时立即应用 buff
 	if building_id == "barracks":
 		_barracks_buff()
+
+	# 铸造所放置时注册等级到 GameManager
+	if building_id == "tech_forge":
+		_register_forge_level()
 
 	_update_label()
 	building_placed.emit(self)
@@ -165,6 +169,10 @@ func upgrade() -> bool:
 	# 兵营升级后重新应用 buff
 	if building_id == "barracks":
 		_barracks_buff()
+
+	# 铸造所升级时更新等级并应用全队加成
+	if building_id == "tech_forge":
+		_register_forge_level()
 
 	_update_label()
 	building_upgraded.emit(self, current_level)
@@ -341,6 +349,28 @@ func _barracks_buff() -> void:
 				hero_stats.add_modifier("defense", source_name, armor_bonus)
 
 
+## 铸造所：注册等级到 GameManager meta，供卡牌池和装备系统查询
+func _register_forge_level() -> void:
+	if not is_instance_valid(GameManager):
+		return
+	GameManager.set_meta("tech_forge_level", current_level)
+	print("[BuildingBase] 铸造所等级已注册: Lv%d" % current_level)
+
+	# Lv3: 全队暴击伤害+20%
+	if current_level >= 3:
+		var crit_dmg_bonus: float = float(level_data.get("team_crit_damage_bonus", 0.0))
+		if crit_dmg_bonus > 0.0:
+			var heroes: Array[Node] = get_tree().get_nodes_in_group("heroes")
+			if heroes.is_empty():
+				heroes = _find_all_heroes()
+			for hero_node: Node in heroes:
+				if hero_node is HeroBase:
+					var hero: HeroBase = hero_node as HeroBase
+					var hero_stats: StatsComponent = hero.stats
+					hero_stats.add_modifier("crit_damage", "tech_forge_lv3", crit_dmg_bonus)
+			print("[BuildingBase] 铸造所Lv3: 全队暴击伤害 +%.0f%%" % [crit_dmg_bonus * 100.0])
+
+
 ## 移除兵营旧 buff（升级前调用）
 func _remove_barracks_buff() -> void:
 	var source_name: String = "barracks_lv%d" % current_level
@@ -401,6 +431,11 @@ func _apply_research_bonus() -> void:
 			for key: String in ["phys_attack_bonus", "magic_attack_bonus", "hp_bonus", "armor_bonus"]:
 				if level_data.has(key):
 					level_data[key] = roundi(float(level_data[key]) * (1.0 + bonus))
+		"tech_forge":
+			if level_data.has("enchant_chance"):
+				level_data["enchant_chance"] = float(level_data["enchant_chance"]) * (1.0 + bonus)
+			if level_data.has("team_crit_damage_bonus"):
+				level_data["team_crit_damage_bonus"] = float(level_data["team_crit_damage_bonus"]) * (1.0 + bonus)
 
 
 ## 更新等级标签

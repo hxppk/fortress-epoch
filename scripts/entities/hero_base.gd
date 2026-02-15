@@ -55,6 +55,19 @@ var passive_skills: Array = []
 ## 白狼骑士 - 嗜血本能：是否已激活低血攻击加成
 var _blood_instinct_active: bool = false
 
+## 辉石法师 - 辉石共鸣：下一次普攻是否强化
+var _gem_resonance_active: bool = false
+
+## 重力法师 - 质量坍缩：当前减免是否激活
+var _mass_collapse_active: bool = false
+
+## 头顶血条
+var _hp_bar_bg: ColorRect = null
+var _hp_bar_fill: ColorRect = null
+const HP_BAR_WIDTH: float = 24.0
+const HP_BAR_HEIGHT: float = 3.0
+const HP_BAR_OFFSET_Y: float = -14.0
+
 # ============================================================
 # 常量
 # ============================================================
@@ -77,6 +90,10 @@ func _ready() -> void:
 	if GameManager.has_signal("kill_recorded"):
 		if not GameManager.kill_recorded.is_connected(_on_kill_recorded):
 			GameManager.kill_recorded.connect(_on_kill_recorded)
+
+	# 创建头顶血条
+	_create_hp_bar()
+	stats.health_changed.connect(_on_health_changed)
 
 	# 如果编辑器中已设置 hero_id，自动初始化
 	if hero_id != "":
@@ -216,10 +233,30 @@ func _on_stats_died() -> void:
 	# 禁用物理处理
 	set_physics_process(false)
 	set_process(false)
-	# 播放死亡视觉效果（简单淡出）
+	# 隐藏血条
+	if _hp_bar_bg:
+		_hp_bar_bg.visible = false
+	# 播放死亡视觉效果（淡出，但不销毁 — 等待复活）
 	var tween: Tween = create_tween()
 	tween.tween_property(self, "modulate:a", 0.0, 0.5)
-	tween.tween_callback(queue_free)
+
+
+## 复活英雄（由外部调用，如 GameSession）
+func respawn(pos: Vector2) -> void:
+	global_position = pos
+	stats.current_hp = stats.max_hp
+	stats.health_changed.emit(stats.current_hp, stats.max_hp)
+	modulate = Color.WHITE
+	set_physics_process(true)
+	set_process(true)
+	move_direction = Vector2.ZERO
+	targets_in_range.clear()
+	if _hp_bar_bg:
+		_hp_bar_bg.visible = true
+	# 复活闪光效果
+	modulate = Color(1.5, 1.5, 2.0, 1.0)
+	var tween: Tween = create_tween()
+	tween.tween_property(self, "modulate", Color.WHITE, 0.5)
 
 
 func _on_kill_recorded(_total_kills: int) -> void:
@@ -424,6 +461,8 @@ func _draw_shadow_ellipse(center: Vector2, radius: Vector2, color: Color) -> voi
 func _load_passive_skills() -> void:
 	passive_skills.clear()
 	_blood_instinct_active = false
+	_gem_resonance_active = false
+	_mass_collapse_active = false
 
 	if hero_data.is_empty() or not hero_data.has("skills"):
 		return
@@ -445,7 +484,9 @@ func _process_passive_skills(_delta: float) -> void:
 		match skill_id:
 			"blood_instinct":
 				_process_blood_instinct(skill)
-			# starfire_spread 是事件驱动，在 _perform_aoe_attack 中触发
+			"mass_collapse":
+				_process_mass_collapse(skill)
+			# starfire_spread / gem_resonance 是事件驱动型被动
 
 
 ## 白狼骑士 - 嗜血本能
@@ -480,7 +521,6 @@ func trigger_blood_instinct_heal() -> void:
 
 ## 流星法师 - 星火燎原（对目标施加灼烧）
 func trigger_starfire_spread(target: Node2D) -> void:
-	# 查找星火燎原技能数据
 	var starfire_data: Dictionary = {}
 	for skill: Dictionary in passive_skills:
 		if skill.get("id", "") == "starfire_spread":
@@ -490,9 +530,99 @@ func trigger_starfire_spread(target: Node2D) -> void:
 	if starfire_data.is_empty():
 		return
 
-	# 对目标施加灼烧
 	if target.has_method("apply_burn"):
 		var dot_damage: float = starfire_data.get("dot_damage", 5)
 		var dot_duration: float = starfire_data.get("dot_duration", 3.0)
 		var dot_tick_interval: float = starfire_data.get("dot_tick_interval", 1.0)
 		target.apply_burn(dot_damage, dot_duration, dot_tick_interval)
+
+
+## 辉石法师 - 辉石共鸣（技能命中后激活，下一次普攻伤害+60%）
+func trigger_gem_resonance() -> void:
+	for skill: Dictionary in passive_skills:
+		if skill.get("id", "") == "gem_resonance":
+			if not _gem_resonance_active:
+				_gem_resonance_active = true
+				var bonus: float = skill.get("next_attack_bonus", 0.6)
+				var atk_boost: float = stats.get_stat("attack") * bonus
+				var sp_boost: float = stats.get_stat("spell_power") * bonus
+				stats.add_modifier("attack", "gem_resonance", atk_boost)
+				stats.add_modifier("spell_power", "gem_resonance_sp", sp_boost)
+			return
+
+
+## 辉石法师 - 消耗辉石共鸣（普攻后调用）
+func consume_gem_resonance() -> void:
+	if _gem_resonance_active:
+		_gem_resonance_active = false
+		stats.remove_modifier("attack", "gem_resonance")
+		stats.remove_modifier("spell_power", "gem_resonance_sp")
+
+
+## 创建头顶浮动血条
+func _create_hp_bar() -> void:
+	# 背景（深灰）
+	_hp_bar_bg = ColorRect.new()
+	_hp_bar_bg.color = Color(0.15, 0.15, 0.15, 0.8)
+	_hp_bar_bg.size = Vector2(HP_BAR_WIDTH, HP_BAR_HEIGHT)
+	_hp_bar_bg.position = Vector2(-HP_BAR_WIDTH / 2.0, HP_BAR_OFFSET_Y)
+	_hp_bar_bg.z_index = 10
+	_hp_bar_bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_hp_bar_bg)
+
+	# 填充（绿色）
+	_hp_bar_fill = ColorRect.new()
+	_hp_bar_fill.color = Color(0.2, 0.9, 0.2)
+	_hp_bar_fill.size = Vector2(HP_BAR_WIDTH, HP_BAR_HEIGHT)
+	_hp_bar_fill.position = Vector2.ZERO
+	_hp_bar_fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_hp_bar_bg.add_child(_hp_bar_fill)
+
+
+## 血条更新
+func _on_health_changed(current_hp: float, max_hp_val: float) -> void:
+	if _hp_bar_fill == null:
+		return
+	var ratio: float = clampf(current_hp / maxf(max_hp_val, 1.0), 0.0, 1.0)
+	_hp_bar_fill.size.x = HP_BAR_WIDTH * ratio
+	# 颜色：绿 > 黄 > 红
+	if ratio > 0.6:
+		_hp_bar_fill.color = Color(0.2, 0.9, 0.2)
+	elif ratio > 0.3:
+		_hp_bar_fill.color = Color(0.9, 0.8, 0.2)
+	else:
+		_hp_bar_fill.color = Color(0.9, 0.2, 0.2)
+
+
+## 重力法师 - 质量坍缩（周围敌人越多减免越高）
+func _process_mass_collapse(skill_data: Dictionary) -> void:
+	var max_reduction: float = skill_data.get("max_reduction", 0.5)
+	var enemy_count_cap: int = int(skill_data.get("enemy_count_cap", 10))
+	var check_radius: float = skill_data.get("check_radius", 80.0)
+
+	# 计算范围内的敌人数量
+	var enemy_count: int = 0
+	if is_inside_tree():
+		var enemies: Array[Node] = get_tree().get_nodes_in_group("enemies")
+		for node: Node in enemies:
+			if node is Node2D and is_instance_valid(node):
+				var enemy: Node2D = node as Node2D
+				if enemy.has_node("StatsComponent"):
+					var e_stats: StatsComponent = enemy.get_node("StatsComponent")
+					if not e_stats.is_alive():
+						continue
+				if global_position.distance_to(enemy.global_position) <= check_radius:
+					enemy_count += 1
+
+	# 计算减免比例
+	var reduction_ratio: float = minf(float(enemy_count) / float(enemy_count_cap), 1.0) * max_reduction
+
+	if reduction_ratio > 0.01:
+		if not _mass_collapse_active:
+			_mass_collapse_active = true
+		# 更新防御修改器（使用百分比修饰器）
+		stats.add_modifier("defense", "mass_collapse", reduction_ratio, StatsComponent.ModType.PERCENT)
+	else:
+		if _mass_collapse_active:
+			_mass_collapse_active = false
+			stats.remove_modifier("defense", "mass_collapse")

@@ -1,10 +1,19 @@
 extends Node
-## CombatFeedback — 战斗视觉反馈（闪白、屏幕震动、击杀粒子、弹性缩放）
+## CombatFeedback — 战斗视觉反馈（闪白、屏幕震动、击杀粒子、弹性缩放、帧冻结、连杀）
 ## 可作为 Autoload 使用，也可挂载到场景中。
 
 # 音效
 var _hit_player: AudioStreamPlayer = null
 var _click_player: AudioStreamPlayer = null
+
+# 帧冻结状态
+var _hitstop_active: bool = false
+var _hitstop_timer: float = 0.0
+
+# 连杀系统
+var _kill_streak: int = 0
+var _kill_streak_timer: float = 0.0
+const KILL_STREAK_TIMEOUT: float = 3.0  # 3 秒无击杀重置连杀
 
 
 func _ready() -> void:
@@ -190,6 +199,149 @@ void fragment() {
 }
 """
 
+
+# ============================================================
+# 帧冻结（Hitstop）
+# ============================================================
+
+## 帧冻结：短暂将 Engine.time_scale 设为 0，模拟打击感停顿
+## duration_frames: 停顿帧数（按 60fps 换算）
+func hitstop(duration_frames: int = 2) -> void:
+	if _hitstop_active:
+		return  # 避免叠加
+	if duration_frames <= 0:
+		return
+
+	var duration_seconds: float = float(duration_frames) / 60.0
+	_hitstop_active = true
+	_hitstop_timer = duration_seconds
+	Engine.time_scale = 0.05  # 接近冻结但不完全为0（避免 delta=0 问题）
+
+
+func _process(delta: float) -> void:
+	# 帧冻结恢复（使用未缩放的时间）
+	if _hitstop_active:
+		_hitstop_timer -= delta / maxf(Engine.time_scale, 0.01)
+		if _hitstop_timer <= 0.0:
+			_hitstop_active = false
+			Engine.time_scale = 1.0
+
+	# 连杀超时检查
+	if _kill_streak > 0:
+		_kill_streak_timer -= delta
+		if _kill_streak_timer <= 0.0:
+			_kill_streak = 0
+
+# ============================================================
+# 连杀系统
+# ============================================================
+
+## 记录一次击杀，更新连杀计数并触发反馈
+func record_kill() -> void:
+	_kill_streak += 1
+	_kill_streak_timer = KILL_STREAK_TIMEOUT
+
+	# 根据连杀数触发不同等级的反馈
+	match _kill_streak:
+		5:
+			_show_kill_streak_text("连杀 x5", Color.WHITE, 24)
+		10:
+			_show_kill_streak_text("大杀特杀!", Color(0.4, 0.7, 1.0), 28)
+		20:
+			_show_kill_streak_text("势不可挡!", Color(0.7, 0.4, 1.0), 32)
+		50:
+			_show_kill_streak_text("无人能挡!", Color.GOLD, 36)
+		100:
+			_show_kill_streak_text("神一般的割草!", Color(1.0, 0.4, 0.8), 40)
+		_:
+			# 每 5 连杀也显示一次
+			if _kill_streak > 5 and _kill_streak % 5 == 0:
+				_show_kill_streak_text("连杀 x%d" % _kill_streak, Color.WHITE, 24)
+
+
+## 获取当前连杀数
+func get_kill_streak() -> int:
+	return _kill_streak
+
+
+## 显示连杀文字（屏幕右下角弹出）
+func _show_kill_streak_text(text: String, color: Color, font_size: int) -> void:
+	var tree := get_tree()
+	if tree == null or tree.current_scene == null:
+		return
+
+	var label := Label.new()
+	label.text = text
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	label.add_theme_font_size_override("font_size", font_size)
+	label.add_theme_color_override("font_color", color)
+	label.add_theme_color_override("font_shadow_color", Color.BLACK)
+	label.add_theme_constant_override("shadow_offset_x", 2)
+	label.add_theme_constant_override("shadow_offset_y", 2)
+	label.z_index = 150
+
+	# 使用 CanvasLayer 确保在 UI 层级
+	var canvas := CanvasLayer.new()
+	canvas.layer = 90
+	label.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	label.offset_left = -250.0
+	label.offset_top = -80.0
+	label.offset_right = -20.0
+	label.offset_bottom = -40.0
+	canvas.add_child(label)
+	tree.current_scene.add_child(canvas)
+
+	# 从下方弹入 + 放大 + 缩小 + 淡出
+	label.scale = Vector2(0.5, 0.5)
+	label.pivot_offset = label.size / 2.0
+	var tween := label.create_tween()
+	tween.tween_property(label, "scale", Vector2(1.2, 1.2), 0.15).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
+	tween.tween_property(label, "scale", Vector2(1.0, 1.0), 0.1)
+	tween.tween_interval(1.0)
+	tween.tween_property(label, "modulate:a", 0.0, 0.5)
+	tween.tween_callback(canvas.queue_free)
+
+# ============================================================
+# 击退视觉
+# ============================================================
+
+## 对被击中的敌人施加短距离击退效果
+func knockback_visual(target: Node2D, from_position: Vector2, distance: float = 5.0, duration: float = 0.1) -> void:
+	if not is_instance_valid(target):
+		return
+	var direction: Vector2 = (target.global_position - from_position).normalized()
+	# 添加小幅随机角度偏移
+	direction = direction.rotated(randf_range(-0.26, 0.26))  # +/- 15 degrees
+	var knockback_offset: Vector2 = direction * distance
+	var original_pos: Vector2 = target.global_position
+	var tween := target.create_tween()
+	tween.tween_property(target, "global_position", original_pos + knockback_offset, duration * 0.3).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_EXPO)
+	tween.tween_property(target, "global_position", original_pos, duration * 0.7).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+
+# ============================================================
+# 改进的屏幕震动（指数衰减）
+# ============================================================
+
+## 带衰减曲线的屏幕震动
+func screen_shake_decay(camera: Camera2D, intensity: float = 3.0, duration: float = 0.2) -> void:
+	if not is_instance_valid(camera):
+		return
+	var original_offset: Vector2 = camera.offset
+	var steps: int = 8
+	var step_duration: float = duration / float(steps)
+	var tween := camera.create_tween()
+	for i in steps:
+		var decay: float = pow(1.0 - float(i) / float(steps), 2.0)  # 指数衰减
+		var random_offset := Vector2(
+			randf_range(-intensity, intensity) * decay,
+			randf_range(-intensity, intensity) * decay,
+		)
+		tween.tween_property(camera, "offset", original_offset + random_offset, step_duration)
+	tween.tween_property(camera, "offset", original_offset, step_duration * 0.5)
+
+# ============================================================
+# 内部工具
+# ============================================================
 
 ## 确保 sprite 挂载了闪白着色器，返回其 ShaderMaterial
 func _ensure_flash_shader(sprite: Node2D) -> ShaderMaterial:

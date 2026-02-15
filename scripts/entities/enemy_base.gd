@@ -1,7 +1,7 @@
 class_name EnemyBase
 extends CharacterBody2D
 ## EnemyBase — 敌人基类
-## AI 移动 + 攻击堡垒 + 掉落。所有敌人共享此脚本，通过 behavior 区分行为。
+## AI 移动 + 仇恨目标选择 + 攻击 + 掉落。所有敌人共享此脚本，通过 behavior 区分行为。
 
 # ============================================================
 # 信号
@@ -30,7 +30,7 @@ var behavior: String = "straight_charge"
 ## 当前目标节点（英雄 / 建筑 / 堡垒核心）
 var target: Node2D = null
 
-## 移动目标点
+## 移动目标点（堡垒方向，默认目的地）
 var move_target: Vector2 = Vector2.ZERO
 
 ## 对象池：是否激活
@@ -56,6 +56,16 @@ var _base_attack_interval: float = 1.5
 
 ## 到达目标的距离阈值
 const ARRIVAL_DISTANCE: float = 10.0
+
+## 仇恨系统：检测范围（像素）
+const AGGRO_RANGE: float = 120.0
+
+## 仇恨系统：攻击射程（像素，进入此距离后停下攻击）
+const ATTACK_RANGE: float = 24.0
+
+## 仇恨目标刷新间隔（秒），避免每帧扫描
+var _aggro_refresh_timer: float = 0.0
+const AGGRO_REFRESH_INTERVAL: float = 0.3
 
 # ============================================================
 # 子节点引用
@@ -88,6 +98,12 @@ func _ready() -> void:
 func _physics_process(delta: float) -> void:
 	if not is_active:
 		return
+
+	# 定期刷新仇恨目标
+	_aggro_refresh_timer -= delta
+	if _aggro_refresh_timer <= 0.0:
+		_aggro_refresh_timer = AGGRO_REFRESH_INTERVAL
+		_update_aggro_target()
 
 	_execute_behavior(delta)
 	move_and_slide()
@@ -150,6 +166,8 @@ func activate(pos: Vector2, target_pos: Vector2) -> void:
 	_attack_timer = 0.0
 	enrage_count = 0
 	_current_phase = 0
+	_aggro_refresh_timer = 0.0
+	target = null
 
 	# 重置狂暴阈值
 	for i in range(_enrage_thresholds_triggered.size()):
@@ -180,6 +198,7 @@ func reset() -> void:
 	enrage_count = 0
 	_current_phase = 0
 	_attack_timer = 0.0
+	_aggro_refresh_timer = 0.0
 	facing_right = true
 	velocity = Vector2.ZERO
 	target = null
@@ -194,6 +213,61 @@ func reset() -> void:
 		_enrage_thresholds_triggered[i] = false
 
 	_stop_burn()  # 清除灼烧效果
+
+# ============================================================
+# 仇恨系统
+# ============================================================
+
+## 更新仇恨目标：英雄 > 建筑 > 堡垒（move_target）
+func _update_aggro_target() -> void:
+	# 优先级1：射程内存活英雄（最近的）
+	var hero_target := _find_nearest_in_group("heroes", AGGRO_RANGE)
+	if hero_target != null:
+		target = hero_target
+		return
+
+	# 优先级2：射程内存活建筑（最近的）
+	var building_target := _find_nearest_in_group("buildings", AGGRO_RANGE)
+	if building_target != null:
+		target = building_target
+		return
+
+	# 优先级3：无目标，继续向堡垒移动
+	target = null
+
+
+## 在指定 group 中查找距离最近的存活节点
+func _find_nearest_in_group(group_name: String, max_range: float) -> Node2D:
+	var tree := get_tree()
+	if tree == null:
+		return null
+
+	var candidates: Array[Node] = tree.get_nodes_in_group(group_name)
+	var nearest: Node2D = null
+	var nearest_dist_sq: float = max_range * max_range
+
+	for node: Node in candidates:
+		if node is not Node2D:
+			continue
+		var n2d: Node2D = node as Node2D
+
+		# 跳过不可见或已死亡的目标
+		if not n2d.visible:
+			continue
+		if n2d.has_method("is_alive") and not n2d.is_alive():
+			continue
+		# 也检查 stats 组件
+		if n2d.has_node("StatsComponent"):
+			var target_stats: StatsComponent = n2d.get_node("StatsComponent") as StatsComponent
+			if target_stats != null and not target_stats.is_alive():
+				continue
+
+		var dist_sq: float = global_position.distance_squared_to(n2d.global_position)
+		if dist_sq < nearest_dist_sq:
+			nearest_dist_sq = dist_sq
+			nearest = n2d
+
+	return nearest
 
 # ============================================================
 # 行为执行
@@ -218,18 +292,53 @@ func _execute_behavior(delta: float) -> void:
 			_move_toward_target(delta)
 
 
-## 向目标移动
+## 向目标移动（含仇恨目标处理）
 func _move_toward_target(delta: float) -> void:
 	var speed: float = stats.get_stat("speed")
 
-	var distance_to_target: float = global_position.distance_to(move_target)
-	if distance_to_target <= ARRIVAL_DISTANCE:
+	# 如果有仇恨目标（英雄/建筑），向其移动并攻击
+	if target != null and is_instance_valid(target):
+		var dist_to_target: float = global_position.distance_to(target.global_position)
+		if dist_to_target <= ATTACK_RANGE:
+			# 在攻击范围内：停止移动，执行攻击
+			velocity = Vector2.ZERO
+			_attack_target(delta)
+			return
+		else:
+			# 向仇恨目标移动
+			var direction: Vector2 = (target.global_position - global_position).normalized()
+			velocity = direction * speed
+			return
+
+	# 无仇恨目标：向堡垒（move_target）移动
+	var distance_to_fortress: float = global_position.distance_to(move_target)
+	if distance_to_fortress <= ARRIVAL_DISTANCE:
 		_on_reached_target()
 		return
 
 	# 直接朝目标移动（不依赖 NavigationAgent2D）
 	var direction: Vector2 = (move_target - global_position).normalized()
 	velocity = direction * speed
+
+
+## 攻击仇恨目标
+func _attack_target(delta: float) -> void:
+	_attack_timer -= delta
+	if _attack_timer > 0.0:
+		return
+
+	_attack_timer = _base_attack_interval
+
+	if target == null or not is_instance_valid(target):
+		return
+
+	var atk: float = stats.get_stat("attack")
+
+	# 对目标的 StatsComponent 造成伤害
+	if target.has_node("StatsComponent"):
+		var target_stats: StatsComponent = target.get_node("StatsComponent") as StatsComponent
+		if target_stats != null and target_stats.is_alive():
+			target_stats.take_damage(atk)
 
 # ============================================================
 # 到达目标处理
@@ -262,6 +371,12 @@ func die() -> void:
 
 	_drop_loot()
 	GameManager.record_kill()
+
+	# 连杀计数 + 击杀粒子反馈
+	if CombatFeedback:
+		CombatFeedback.record_kill()
+		CombatFeedback.spawn_death_particles(global_position)
+
 	enemy_died.emit(self)
 	deactivate()
 
@@ -396,7 +511,7 @@ func _on_health_changed(_current: float, _maximum: float) -> void:
 	pass
 
 # ============================================================
-# 数据加载
+# 灼烧 DOT
 # ============================================================
 
 ## 灼烧 DOT 相关变量

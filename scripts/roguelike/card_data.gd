@@ -20,6 +20,10 @@ var description: String = ""
 var effects: Array = []
 ## Hero ID filter. Empty string means the card is universal.
 var hero_filter: String = ""
+## Equipment slot: "weapon" | "armor" | "accessory" (only for equipment cards)
+var slot: String = ""
+## Equipment effect configuration dictionary (only for equipment cards)
+var equipment_effect: Dictionary = {}
 
 
 ## Factory: build a CardData instance from a raw dictionary (parsed from JSON).
@@ -34,6 +38,8 @@ static func from_dict(data: Dictionary) -> CardData:
 	card.description = data.get("description", "")
 	card.effects = data.get("effects", [])
 	card.hero_filter = data.get("hero_filter", "")
+	card.slot = data.get("slot", "")
+	card.equipment_effect = data.get("equipment_effect", {})
 	return card
 
 
@@ -61,6 +67,8 @@ func get_category_label() -> String:
 			return "属性卡"
 		"resource":
 			return "资源卡"
+		"equipment":
+			return "装备卡"
 		_:
 			return "未知"
 

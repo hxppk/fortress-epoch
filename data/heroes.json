@@ -7,11 +7,11 @@
       "sprite": "res://assets/sprites/heroes/knight.png",
       "base_stats": {
         "hp": 120,
-        "attack": 9,
+        "attack": 12,
         "defense": 15,
         "speed": 100,
-        "attack_speed": 1.0,
-        "attack_range": 80,
+        "attack_speed": 0.6,
+        "attack_range": 48,
         "crit_rate": 0.10,
         "spell_power": 5
       },
@@ -72,7 +72,7 @@
           "type": "ultimate",
           "description": "变身8秒，攻击范围和攻速大幅提升",
           "duration": 8.0,
-          "charge_condition": { "type": "kill_count", "value": 50 },
+          "charge_condition": { "type": "kill_count", "value": 35 },
           "attack_range_bonus": 1.5,
           "attack_speed_bonus": 0.5
         }
@@ -84,14 +84,14 @@
       "type": "ranged_magic",
       "sprite": "res://assets/sprites/heroes/mage.png",
       "base_stats": {
-        "hp": 70,
+        "hp": 75,
         "attack": 5,
         "defense": 5,
         "speed": 90,
-        "attack_speed": 0.8,
+        "attack_speed": 1.4,
         "attack_range": 120,
         "crit_rate": 0.05,
-        "spell_power": 13
+        "spell_power": 18
       },
       "auto_attack": {
         "pattern": "aoe_impact",
@@ -151,7 +151,151 @@
           "description": "巨型陨石，大范围毁灭性打击",
           "radius": 128,
           "damage_ratio": 10.0,
-          "charge_condition": { "type": "damage_dealt", "value": 3000 }
+          "charge_condition": { "type": "damage_dealt", "value": 1800 }
+        }
+      ]
+    },
+    {
+      "id": "crystal_mage",
+      "name": "辉石法师",
+      "type": "ranged_magic",
+      "sprite": "res://assets/sprites/heroes/crystal_mage.png",
+      "base_stats": {
+        "hp": 85,
+        "attack": 7,
+        "defense": 7,
+        "speed": 95,
+        "attack_speed": 1.2,
+        "attack_range": 140,
+        "crit_rate": 0.05,
+        "spell_power": 16
+      },
+      "auto_attack": {
+        "pattern": "homing_bolt",
+        "hit_count_threshold": 0,
+        "on_threshold_effect": ""
+      },
+      "skills": [
+        {
+          "id": "crystal_bolt",
+          "name": "辉石弹",
+          "type": "normal_attack",
+          "description": "自动追踪最近敌人",
+          "damage_ratio": 1.0,
+          "pattern": "homing_bolt"
+        },
+        {
+          "id": "prism_refract",
+          "name": "棱光折射",
+          "type": "active",
+          "slot": 1,
+          "description": "光线弹射6次，敌人越密伤害越高",
+          "cooldown": 10.0,
+          "bounces": 6,
+          "damage_ratio": 1.2
+        },
+        {
+          "id": "gem_cage",
+          "name": "宝石牢笼",
+          "type": "active",
+          "slot": 2,
+          "description": "区域结界，困住敌人3秒",
+          "cooldown": 15.0,
+          "radius": 48,
+          "duration": 3.0,
+          "effects": [
+            { "type": "root", "duration": 3.0 }
+          ]
+        },
+        {
+          "id": "gem_resonance",
+          "name": "辉石共鸣",
+          "type": "passive",
+          "description": "技能命中后下一次普攻伤害+60%",
+          "next_attack_bonus": 0.6
+        },
+        {
+          "id": "rainbow_prism",
+          "name": "七彩虹光",
+          "type": "ultimate",
+          "description": "扇形持续光线5秒",
+          "duration": 5.0,
+          "fan_angle": 90,
+          "damage_ratio": 0.8,
+          "tick_interval": 0.3,
+          "charge_condition": { "type": "skill_hit", "value": 30 }
+        }
+      ]
+    },
+    {
+      "id": "gravity_mage",
+      "name": "重力法师",
+      "type": "melee_magic",
+      "sprite": "res://assets/sprites/heroes/gravity_mage.png",
+      "base_stats": {
+        "hp": 100,
+        "attack": 8,
+        "defense": 10,
+        "speed": 90,
+        "attack_speed": 1.0,
+        "attack_range": 56,
+        "crit_rate": 0.08,
+        "spell_power": 14
+      },
+      "auto_attack": {
+        "pattern": "ring_pulse",
+        "hit_count_threshold": 0,
+        "on_threshold_effect": ""
+      },
+      "skills": [
+        {
+          "id": "gravity_pulse",
+          "name": "引力脉冲",
+          "type": "normal_attack",
+          "description": "环形攻击，轻微拉拽敌人",
+          "damage_ratio": 1.0,
+          "pattern": "ring_pulse"
+        },
+        {
+          "id": "gravity_well",
+          "name": "重力井",
+          "type": "active",
+          "slot": 1,
+          "description": "目标位置生成黑洞，吸引敌人3秒",
+          "cooldown": 12.0,
+          "radius": 64,
+          "duration": 3.0,
+          "pull_force": 15
+        },
+        {
+          "id": "gravity_flip",
+          "name": "引力翻转",
+          "type": "active",
+          "slot": 2,
+          "description": "将周围敌人抛向空中2秒后砸落AOE",
+          "cooldown": 15.0,
+          "radius": 56,
+          "float_duration": 2.0,
+          "damage_ratio": 3.0
+        },
+        {
+          "id": "mass_collapse",
+          "name": "质量坍缩",
+          "type": "passive",
+          "description": "周围敌人越多，伤害减免越高（最多50%）",
+          "max_reduction": 0.5,
+          "enemy_count_cap": 10,
+          "check_radius": 80
+        },
+        {
+          "id": "singularity_collapse",
+          "name": "奇点崩塌",
+          "type": "ultimate",
+          "description": "超大引力场，拉全屏敌人到中心后爆炸",
+          "radius": 200,
+          "damage_ratio": 12.0,
+          "pull_duration": 2.0,
+          "charge_condition": { "type": "pull_count", "value": 100 }
         }
       ]
     }

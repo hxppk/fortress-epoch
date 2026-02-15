@@ -109,6 +109,7 @@ func start_placement(building_type: String) -> void:
 
 	if not can_afford:
 		push_warning("TowerPlacement: 资源不足，无法建造 '%s'" % building_type)
+		_show_insufficient_funds_tip(building_type, build_cost)
 		return
 
 	# 如果已在放置模式，先取消
@@ -316,3 +317,47 @@ func _get_build_cost(building_type: String) -> Dictionary:
 		return {}
 
 	return levels[0].get("upgrade_cost", {})
+
+
+## 屏幕上显示资源不足提示
+func _show_insufficient_funds_tip(building_type: String, cost: Dictionary) -> void:
+	var tree := get_tree()
+	if tree == null or tree.current_scene == null:
+		return
+
+	var type_names: Dictionary = {
+		"arrow_tower": "箭塔",
+		"gold_mine": "金矿",
+		"barracks": "兵营",
+		"tech_forge": "科技炉",
+	}
+	var display_name: String = type_names.get(building_type, building_type)
+
+	var cost_text: String = ""
+	for res_type: String in cost:
+		var needed: int = int(cost[res_type])
+		var have: int = int(GameManager.resources.get(res_type, 0))
+		cost_text += "%s %d/%d " % [res_type, have, needed]
+
+	var label := Label.new()
+	label.text = "金币不足！%s 需要 %s" % [display_name, cost_text.strip_edges()]
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.add_theme_font_size_override("font_size", 16)
+	label.add_theme_color_override("font_color", Color(1.0, 0.4, 0.4))
+	label.add_theme_color_override("font_shadow_color", Color.BLACK)
+	label.add_theme_constant_override("shadow_offset_x", 1)
+	label.add_theme_constant_override("shadow_offset_y", 1)
+
+	var canvas := CanvasLayer.new()
+	canvas.layer = 90
+	label.set_anchors_preset(Control.PRESET_CENTER)
+	label.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	label.grow_vertical = Control.GROW_DIRECTION_BOTH
+	label.offset_top = 30.0
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	canvas.add_child(label)
+	tree.current_scene.add_child(canvas)
+
+	var tween := label.create_tween()
+	tween.tween_property(label, "modulate:a", 0.0, 1.0).set_delay(1.0)
+	tween.tween_callback(canvas.queue_free)

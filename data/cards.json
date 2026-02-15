@@ -198,6 +198,113 @@
       "effects": [
         { "type": "crystal_drop_rate", "value": 0.10 }
       ]
+    },
+    {
+      "id": "equip_flame_sword",
+      "name": "烈焰之剑",
+      "category": "equipment",
+      "rarity": "uncommon",
+      "icon_color": "green",
+      "source_building": "tech",
+      "slot": "weapon",
+      "description": "普攻附带15%概率灼烧（3秒，每秒3伤害）",
+      "effects": [],
+      "equipment_effect": {
+        "passive": "burn_on_hit",
+        "burn_damage": 3,
+        "burn_duration": 3.0,
+        "burn_chance": 0.15
+      }
+    },
+    {
+      "id": "equip_frost_shield",
+      "name": "冰霜护盾",
+      "category": "equipment",
+      "rarity": "uncommon",
+      "icon_color": "green",
+      "source_building": "tech",
+      "slot": "armor",
+      "description": "受击时20%概率冻结攻击者1.5秒",
+      "effects": [],
+      "equipment_effect": {
+        "passive": "freeze_on_hit",
+        "freeze_duration": 1.5,
+        "freeze_chance": 0.20
+      }
+    },
+    {
+      "id": "equip_wind_boots",
+      "name": "疾风靴",
+      "category": "equipment",
+      "rarity": "common",
+      "icon_color": "green",
+      "source_building": "tech",
+      "slot": "accessory",
+      "description": "移动速度+20%，闪避率+5%",
+      "effects": [
+        { "type": "speed", "value": 0.20 },
+        { "type": "dodge", "value": 0.05 }
+      ],
+      "equipment_effect": {}
+    },
+    {
+      "id": "equip_enhance_weapon",
+      "name": "武器淬炼",
+      "category": "equipment",
+      "rarity": "common",
+      "icon_color": "green",
+      "source_building": "tech",
+      "slot": "weapon",
+      "description": "已装备武器效果+50%",
+      "effects": [],
+      "equipment_effect": {
+        "enhance_target": "weapon",
+        "enhance_ratio": 0.50
+      }
+    },
+    {
+      "id": "equip_enhance_armor",
+      "name": "护甲强化",
+      "category": "equipment",
+      "rarity": "epic",
+      "icon_color": "green",
+      "source_building": "tech",
+      "slot": "armor",
+      "description": "已装备护甲效果+50%，受到伤害-10%",
+      "effects": [
+        { "type": "damage_reduction", "value": 0.10 }
+      ],
+      "equipment_effect": {
+        "enhance_target": "armor",
+        "enhance_ratio": 0.50
+      }
+    },
+    {
+      "id": "crystal_mage_enhance",
+      "name": "辉石强化",
+      "category": "skill",
+      "rarity": "uncommon",
+      "icon_color": "red",
+      "source_building": "safety",
+      "description": "棱光折射弹射次数+3",
+      "hero_filter": "crystal_mage",
+      "effects": [
+        { "type": "skill_specific", "skill_id": "prism_refraction", "bounce_bonus": 3 }
+      ]
+    },
+    {
+      "id": "gravity_mage_enhance",
+      "name": "重力强化",
+      "category": "skill",
+      "rarity": "uncommon",
+      "icon_color": "red",
+      "source_building": "safety",
+      "description": "重力井吸引范围+40%，持续时间+1秒",
+      "hero_filter": "gravity_mage",
+      "effects": [
+        { "type": "skill_specific", "skill_id": "gravity_well", "range_bonus": 0.40 },
+        { "type": "skill_specific", "skill_id": "gravity_well", "duration_bonus": 1.0 }
+      ]
     }
   ]
 }

@@ -10,6 +10,12 @@ var card_data: Dictionary = {}
 var is_selected: bool = false
 ## 基础缩放
 var base_scale: Vector2 = Vector2.ONE
+## 效果预览面板
+var _preview_panel: PanelContainer = null
+## 悬停计时器（延迟显示预览）
+var _hover_timer: float = 0.0
+var _is_hovering: bool = false
+const PREVIEW_HOVER_DELAY: float = 0.5  # 悬停 0.5 秒后显示预览
 
 @onready var rarity_banner: ColorRect = $VBoxContainer/RarityBanner
 @onready var category_icon: ColorRect = $VBoxContainer/CategoryIcon
@@ -63,6 +69,14 @@ func setup(data: Dictionary) -> void:
 	var icon_color_key: String = data.get("icon_color", "blue")
 	category_icon.color = _get_category_color(icon_color_key)
 
+	# 装备卡额外标识：在稀有度文字后追加槽位标签
+	var card_category: String = data.get("category", "")
+	if card_category == "equipment":
+		var slot: String = data.get("slot", "")
+		var slot_label: String = _get_slot_label(slot)
+		if slot_label != "":
+			rarity_label.text = rarity_label.text + " · " + slot_label
+
 	# 重置状态
 	is_selected = false
 	modulate = Color.WHITE
@@ -109,8 +123,23 @@ func _get_category_color(icon_color: String) -> Color:
 			return Color(0.29, 0.56, 0.85)
 		"gold":
 			return Color(0.95, 0.77, 0.06)
+		"green":
+			return Color(0.18, 0.75, 0.35)
 		_:
 			return Color(0.7, 0.7, 0.7)
+
+
+## 装备槽位中文标签
+func _get_slot_label(slot: String) -> String:
+	match slot:
+		"weapon":
+			return "武器"
+		"armor":
+			return "护甲"
+		"accessory":
+			return "饰品"
+		_:
+			return ""
 
 
 ## 选中动画：缩放到 1.1 + 边框发光
@@ -141,17 +170,22 @@ func play_dismiss_animation() -> void:
 	tween.tween_property(self, "scale", Vector2(0.8, 0.8), 0.35)
 
 
-## 悬停：缩放 1.05
+## 悬停：缩放 1.05 + 开始预览计时
 func _on_mouse_entered() -> void:
 	if is_selected:
 		return
+	_is_hovering = true
+	_hover_timer = 0.0
 	pivot_offset = size / 2.0
 	var tween := create_tween().set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 	tween.tween_property(self, "scale", base_scale * 1.05, 0.15)
 
 
-## 离开：恢复原始缩放
+## 离开：恢复原始缩放 + 隐藏预览
 func _on_mouse_exited() -> void:
+	_is_hovering = false
+	_hover_timer = 0.0
+	_hide_preview()
 	if is_selected:
 		return
 	pivot_offset = size / 2.0
@@ -161,4 +195,121 @@ func _on_mouse_exited() -> void:
 
 ## 选择按钮点击
 func _on_select_button_pressed() -> void:
+	_hide_preview()
 	card_clicked.emit(card_data)
+
+
+func _process(delta: float) -> void:
+	# 悬停延迟显示效果预览
+	if _is_hovering and _preview_panel == null and not is_selected:
+		_hover_timer += delta
+		if _hover_timer >= PREVIEW_HOVER_DELAY:
+			_show_preview()
+
+
+## 显示效果预览面板
+func _show_preview() -> void:
+	if _preview_panel != null:
+		return
+
+	var effects: Array = card_data.get("effects", [])
+	if effects.is_empty():
+		return
+
+	_preview_panel = PanelContainer.new()
+	_preview_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	# 暗色半透明背景
+	var panel_style := StyleBoxFlat.new()
+	panel_style.bg_color = Color(0.1, 0.1, 0.15, 0.92)
+	panel_style.border_color = Color(0.4, 0.6, 0.9, 0.8)
+	panel_style.set_border_width_all(1)
+	panel_style.set_corner_radius_all(4)
+	panel_style.set_content_margin_all(8.0)
+	_preview_panel.add_theme_stylebox_override("panel", panel_style)
+
+	var vbox := VBoxContainer.new()
+	vbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	# 标题
+	var title := Label.new()
+	title.text = "选择后效果:"
+	title.add_theme_font_size_override("font_size", 14)
+	title.add_theme_color_override("font_color", Color(0.7, 0.8, 1.0))
+	title.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	vbox.add_child(title)
+
+	# 每个效果
+	for effect: Dictionary in effects:
+		var effect_label := Label.new()
+		effect_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		effect_label.add_theme_font_size_override("font_size", 13)
+
+		var effect_type: String = effect.get("type", "")
+		var stat: String = effect.get("stat", "")
+		var value = effect.get("value", 0)
+		var text: String = ""
+		var text_color: Color = Color(0.5, 1.0, 0.5)  # 绿色=增益
+
+		match effect_type:
+			"stat_boost":
+				if value is float and value < 1.0 and value > 0.0:
+					text = "%s: +%d%%" % [_translate_stat(stat), int(value * 100)]
+				else:
+					text = "%s: +%s" % [_translate_stat(stat), str(value)]
+			"resource":
+				text = "%s: +%s" % [_translate_stat(stat), str(value)]
+				text_color = Color(1.0, 0.9, 0.3)  # 金色=资源
+			"equip":
+				var slot: String = effect.get("slot", "")
+				text = "装备 [%s]: %s +%s" % [_translate_slot(slot), _translate_stat(stat), str(value)]
+			_:
+				text = "%s: %s" % [effect_type, str(value)]
+
+		effect_label.text = text
+		effect_label.add_theme_color_override("font_color", text_color)
+		vbox.add_child(effect_label)
+
+	_preview_panel.add_child(vbox)
+
+	# 在卡牌右侧显示
+	_preview_panel.position = Vector2(size.x + 8.0, 0.0)
+	add_child(_preview_panel)
+
+	# 淡入动画
+	_preview_panel.modulate = Color(1, 1, 1, 0)
+	var tween := _preview_panel.create_tween()
+	tween.tween_property(_preview_panel, "modulate:a", 1.0, 0.15)
+
+
+## 隐藏效果预览面板
+func _hide_preview() -> void:
+	if _preview_panel != null and is_instance_valid(_preview_panel):
+		_preview_panel.queue_free()
+		_preview_panel = null
+
+
+## 属性名翻译
+func _translate_stat(stat: String) -> String:
+	match stat:
+		"attack": return "攻击力"
+		"defense": return "防御力"
+		"hp": return "生命值"
+		"max_hp": return "最大生命"
+		"speed": return "移动速度"
+		"attack_speed": return "攻击速度"
+		"crit_rate": return "暴击率"
+		"spell_power": return "法术强度"
+		"gold": return "金币"
+		"crystal": return "水晶"
+		"attack_range": return "攻击范围"
+		_: return stat
+
+
+## 装备槽位翻译
+func _translate_slot(slot: String) -> String:
+	match slot:
+		"weapon": return "武器"
+		"armor": return "护甲"
+		"accessory": return "饰品"
+		_: return slot

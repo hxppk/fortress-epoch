@@ -46,7 +46,7 @@
         },
         {
           "level": 2,
-          "production": 10,
+          "production": 12,
           "production_interval": 10.0,
           "kill_gold_bonus": 0.25,
           "upgrade_cost": { "gold": 120 }
@@ -75,7 +75,7 @@
           "magic_attack_bonus": 10,
           "hp_bonus": 50,
           "armor_bonus": 2,
-          "upgrade_cost": { "gold": 30 }
+          "upgrade_cost": { "exp": 30 }
         },
         {
           "level": 2,
@@ -92,6 +92,35 @@
           "hp_bonus": 220,
           "armor_bonus": 10,
           "upgrade_cost": { "exp": 250 }
+        }
+      ]
+    },
+    {
+      "id": "tech_forge",
+      "name": "铸造所",
+      "category": "tech",
+      "sprite": "res://assets/sprites/buildings/tech_forge.png",
+      "description": "解锁装备卡牌池，提升装备能力",
+      "levels": [
+        {
+          "level": 1,
+          "equipment_slots": 1,
+          "unlock_equipment_pool": true,
+          "upgrade_cost": { "gold": 80 }
+        },
+        {
+          "level": 2,
+          "equipment_slots": 2,
+          "enchant_chance": 0.10,
+          "enchant_elements": ["ice", "fire", "slow"],
+          "upgrade_cost": { "gold": 180 }
+        },
+        {
+          "level": 3,
+          "equipment_slots": 3,
+          "equipment_evolution": true,
+          "team_crit_damage_bonus": 0.20,
+          "upgrade_cost": { "gold": 350 }
         }
       ]
     }

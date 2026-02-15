@@ -39,7 +39,7 @@ var current_phase: String = ""
 var current_stage_index: int = 0
 
 ## 阶段 ID 列表
-var stages: Array = ["stage_1_tutorial", "stage_2"]
+var stages: Array = ["stage_1_tutorial", "stage_2", "stage_3"]
 
 ## 过渡倒计时剩余秒数
 var transition_remaining: float = 0.0

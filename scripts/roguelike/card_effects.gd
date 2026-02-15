@@ -28,7 +28,8 @@ func apply_card(card_data: Variant, hero: Node) -> void:
 		push_warning("[CardEffects] apply_card: 不支持的 card_data 类型")
 		return
 
-	if effects.is_empty():
+	# 装备卡的效果可能在 equipment_effect 字段而非 effects 数组中，跳过空检查
+	if effects.is_empty() and category != "equipment":
 		push_warning("[CardEffects] 卡牌 %s 没有效果数据" % card_id)
 		return
 
@@ -39,6 +40,8 @@ func apply_card(card_data: Variant, hero: Node) -> void:
 			_apply_skill_card(effects, hero, card_id)
 		"resource":
 			_apply_resource_card(effects, card_id)
+		"equipment":
+			_apply_equipment_card(card_data, hero, card_id)
 		_:
 			push_warning("[CardEffects] 未知卡牌类别: %s" % category)
 
@@ -281,6 +284,18 @@ func _start_passive_gold_timer(gm: Node, gold_amount: float, interval: float, so
 				gm.add_resource("gold", gold_per_tick)
 				print("[CardEffects] 被动产出 %d 金币 (source: %s)" % [gold_per_tick, source])
 	)
+
+# ============================================================
+# 装备卡
+# ============================================================
+
+## 装备卡：委托给 EquipmentCardHandler 处理。
+func _apply_equipment_card(card_data: Variant, hero: Node, card_id: String) -> void:
+	var success: bool = EquipmentCardHandler.apply_equipment(card_data, hero)
+	if success:
+		print("[CardEffects] 装备卡 %s 已成功应用" % card_id)
+	else:
+		push_warning("[CardEffects] 装备卡 %s 应用失败（可能槽位已满）" % card_id)
 
 # ============================================================
 # 查询接口（供外部系统使用）

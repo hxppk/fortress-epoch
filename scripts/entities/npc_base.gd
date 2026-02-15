@@ -42,6 +42,13 @@ var facing_right: bool = true
 ## AutoAttackComponent 引用
 var auto_attack: AutoAttackComponent = null
 
+## 头顶血条
+var _hp_bar_bg: ColorRect = null
+var _hp_bar_fill: ColorRect = null
+const HP_BAR_WIDTH: float = 20.0
+const HP_BAR_HEIGHT: float = 2.0
+const HP_BAR_OFFSET_Y: float = -12.0
+
 ## 出征模式
 var expedition_mode: bool = false
 ## 出征目标 X 坐标
@@ -50,6 +57,8 @@ var expedition_target_x: float = 420.0
 
 func _ready() -> void:
 	stats.died.connect(_on_died)
+	_create_hp_bar()
+	stats.health_changed.connect(_on_health_changed)
 
 
 func _physics_process(delta: float) -> void:
@@ -178,23 +187,8 @@ func enter_expedition(spawn_pos: Vector2, target_x: float) -> void:
 ## 退出出征模式，恢复巡逻
 func exit_expedition(restore_pos: Vector2, restore_center: Vector2) -> void:
 	expedition_mode = false
-	global_position = restore_pos
 	patrol_center = restore_center
-	_is_idle = true
-	_idle_timer = 0.0
-	velocity = Vector2.ZERO
-	# Restore full HP
-	if stats and not stats.is_alive():
-		# Re-enable processing if was dead
-		set_physics_process(true)
-		set_process(true)
-		modulate.a = 1.0
-	if stats:
-		stats.current_hp = stats.max_hp
-		stats.health_changed.emit(stats.current_hp, stats.max_hp)
-	# Clear auto attack targets
-	if auto_attack:
-		auto_attack.targets_in_range.clear()
+	respawn_at(restore_pos)
 
 
 ## 出征模式移动：向右推进
@@ -211,11 +205,77 @@ func _on_died() -> void:
 	npc_died.emit(self)
 	set_physics_process(false)
 	set_process(false)
-	if expedition_mode:
-		# 出征中死亡：只淡出，不销毁，等 exit_expedition() 复活
-		var tween := create_tween()
-		tween.tween_property(self, "modulate:a", 0.0, 0.5)
+	if _hp_bar_bg:
+		_hp_bar_bg.visible = false
+	# 淡出但不销毁，等新波次复活
+	var tween := create_tween()
+	tween.tween_property(self, "modulate:a", 0.0, 0.5)
+
+
+## 复活 NPC（新波次开始时调用）
+func respawn_at(pos: Vector2 = Vector2.ZERO) -> void:
+	if pos != Vector2.ZERO:
+		global_position = pos
 	else:
-		var tween := create_tween()
-		tween.tween_property(self, "modulate:a", 0.0, 0.5)
-		tween.tween_callback(queue_free)
+		global_position = patrol_center
+	# 恢复满血
+	stats.current_hp = stats.max_hp
+	stats.health_changed.emit(stats.current_hp, stats.max_hp)
+	# 恢复显示和处理
+	modulate = Color.WHITE
+	set_physics_process(true)
+	set_process(true)
+	if _hp_bar_bg:
+		_hp_bar_bg.visible = true
+	# 重置巡逻状态
+	_is_idle = true
+	_idle_timer = 0.0
+	velocity = Vector2.ZERO
+	if auto_attack:
+		auto_attack.targets_in_range.clear()
+
+
+## 满血回复（存活单位新波次开始时调用）
+func full_heal() -> void:
+	if stats and stats.is_alive():
+		stats.current_hp = stats.max_hp
+		stats.health_changed.emit(stats.current_hp, stats.max_hp)
+
+
+## 是否已死亡
+func is_dead() -> bool:
+	return stats == null or not stats.is_alive()
+
+
+# ============================================================
+# 头顶血条
+# ============================================================
+
+func _create_hp_bar() -> void:
+	_hp_bar_bg = ColorRect.new()
+	_hp_bar_bg.color = Color(0.15, 0.15, 0.15, 0.8)
+	_hp_bar_bg.size = Vector2(HP_BAR_WIDTH, HP_BAR_HEIGHT)
+	_hp_bar_bg.position = Vector2(-HP_BAR_WIDTH / 2.0, HP_BAR_OFFSET_Y)
+	_hp_bar_bg.z_index = 10
+	_hp_bar_bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_hp_bar_bg)
+
+	_hp_bar_fill = ColorRect.new()
+	_hp_bar_fill.color = Color(0.3, 0.8, 0.3)
+	_hp_bar_fill.size = Vector2(HP_BAR_WIDTH, HP_BAR_HEIGHT)
+	_hp_bar_fill.position = Vector2.ZERO
+	_hp_bar_fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_hp_bar_bg.add_child(_hp_bar_fill)
+
+
+func _on_health_changed(current_hp: float, max_hp_val: float) -> void:
+	if _hp_bar_fill == null:
+		return
+	var ratio: float = clampf(current_hp / maxf(max_hp_val, 1.0), 0.0, 1.0)
+	_hp_bar_fill.size.x = HP_BAR_WIDTH * ratio
+	if ratio > 0.6:
+		_hp_bar_fill.color = Color(0.3, 0.8, 0.3)
+	elif ratio > 0.3:
+		_hp_bar_fill.color = Color(0.9, 0.8, 0.2)
+	else:
+		_hp_bar_fill.color = Color(0.9, 0.2, 0.2)

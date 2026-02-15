@@ -196,7 +196,7 @@ text = "金矿(50金)[2]"
 
 [node name="BarracksBtn" type="Button" parent="UI/HUD/BottomBar/BuildButtons"]
 layout_mode = 2
-text = "兵营(免费)[3]"
+text = "兵营(30金)[3]"
 
 [node name="BuildingSelection" parent="UI" instance=ExtResource("6_bsel")]
 visible = false

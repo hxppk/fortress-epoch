@@ -29,6 +29,9 @@ signal threshold_reached(effect: String)
 ## 达到阈值时触发的效果名
 @export var threshold_effect: String = ""
 
+## 环形脉冲拉拽力度（ring_pulse 用，像素/tick）
+@export var pull_strength: float = 8.0
+
 # ============================================================
 # 属性
 # ============================================================
@@ -108,6 +111,10 @@ func try_attack() -> void:
 			_attack_fan_sweep()
 		"aoe_impact":
 			_attack_aoe_impact()
+		"homing_bolt":
+			_attack_homing_bolt()
+		"ring_pulse":
+			_attack_ring_pulse()
 		_:
 			_attack_single_target()
 
@@ -184,6 +191,77 @@ func _attack_aoe_impact() -> void:
 
 	# AOE 圈特效
 	_spawn_aoe_vfx(impact_pos)
+
+	hit_count += hit_targets.size()
+	_check_threshold()
+	attack_performed.emit(hit_targets, total_damage)
+
+
+## 追踪弹攻击：辉石法师，发射追踪弹锁定最近敌人
+func _attack_homing_bolt() -> void:
+	var target: Node2D = _get_nearest_target()
+	if target == null:
+		return
+
+	var atk: float = stats.get_stat("attack")
+	var spell_power: float = stats.get_stat("spell_power")
+	var total_raw: float = atk + spell_power
+
+	# 创建追踪弹视觉（简单圆形 + Tween 移动）
+	var bolt := _HomingBoltVFX.new()
+	bolt.global_position = owner_node.global_position
+	bolt.z_index = 50
+	var scene_root := owner_node.get_tree().current_scene
+	if scene_root:
+		scene_root.add_child(bolt)
+
+	# 记录目标引用和伤害数据，在 Tween 完成时应用
+	var target_ref: Node2D = target
+	var damage_raw: float = total_raw
+	var self_ref: AutoAttackComponent = self
+
+	var tween: Tween = bolt.create_tween()
+	tween.tween_property(bolt, "global_position", target.global_position, 0.25).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
+	tween.tween_callback(
+		func() -> void:
+			if is_instance_valid(target_ref) and is_instance_valid(self_ref):
+				var dmg: int = self_ref._calculate_and_apply_damage(target_ref, damage_raw)
+				# 辉石法师被动：辉石共鸣（技能命中后增强下一次普攻）
+				if owner_node and owner_node.has_method("trigger_gem_resonance"):
+					owner_node.trigger_gem_resonance()
+				self_ref.hit_count += 1
+				self_ref._check_threshold()
+				self_ref.attack_performed.emit([target_ref], dmg)
+			bolt.queue_free()
+	)
+
+
+## 环形脉冲攻击：重力法师，以自身为中心环形AOE + 轻微拉拽
+func _attack_ring_pulse() -> void:
+	var center: Vector2 = owner_node.global_position
+	var atk: float = stats.get_stat("attack")
+	var spell_power: float = stats.get_stat("spell_power")
+	var total_raw: float = atk + spell_power
+	var attack_range: float = stats.get_stat("attack_range")
+
+	var hit_targets: Array = []
+	var total_damage: int = 0
+
+	for target: Node2D in targets_in_range:
+		if not is_instance_valid(target):
+			continue
+		var dist: float = center.distance_to(target.global_position)
+		if dist <= attack_range:
+			var dmg: int = _calculate_and_apply_damage(target, total_raw)
+			total_damage += dmg
+			hit_targets.append(target)
+
+			# 轻微拉拽：将敌人向自身拉近
+			var pull_dir: Vector2 = (center - target.global_position).normalized()
+			target.global_position += pull_dir * pull_strength
+
+	# 环形脉冲特效
+	_spawn_ring_pulse_vfx(center, attack_range)
 
 	hit_count += hit_targets.size()
 	_check_threshold()
@@ -383,6 +461,17 @@ func _spawn_single_vfx(from_pos: Vector2, to_pos: Vector2) -> void:
 		scene_root.add_child(vfx)
 
 
+## 环形脉冲特效
+func _spawn_ring_pulse_vfx(center: Vector2, radius: float) -> void:
+	var vfx := _RingPulseVFX.new()
+	vfx.center = center
+	vfx.radius = radius
+	vfx.z_index = 50
+	var scene_root := owner_node.get_tree().current_scene
+	if scene_root:
+		scene_root.add_child(vfx)
+
+
 # ============================================================
 # 内部 VFX 类
 # ============================================================
@@ -485,3 +574,57 @@ class _SlashLineVFX extends Node2D:
 		var alpha: float = 1.0 - (age / lifetime)
 		var color := Color(1.0, 1.0, 1.0, 0.7 * alpha)
 		draw_line(from_pos, to_pos, color, 2.0)
+
+
+## 追踪弹 — 青色发光小球
+class _HomingBoltVFX extends Node2D:
+	var lifetime: float = 0.4
+	var age: float = 0.0
+	var bolt_radius: float = 4.0
+
+	func _process(delta: float) -> void:
+		age += delta
+		if age >= lifetime:
+			queue_free()
+			return
+		queue_redraw()
+
+	func _draw() -> void:
+		var alpha: float = 1.0 - (age / lifetime) * 0.5
+		var core_color := Color(0.4, 0.9, 1.0, alpha)
+		var glow_color := Color(0.3, 0.7, 1.0, alpha * 0.4)
+		draw_circle(Vector2.ZERO, bolt_radius * 2.0, glow_color)
+		draw_circle(Vector2.ZERO, bolt_radius, core_color)
+
+
+## 环形脉冲 — 紫色扩散环
+class _RingPulseVFX extends Node2D:
+	var center: Vector2
+	var radius: float
+	var lifetime: float = 0.25
+	var age: float = 0.0
+
+	func _ready() -> void:
+		global_position = Vector2.ZERO
+
+	func _process(delta: float) -> void:
+		age += delta
+		if age >= lifetime:
+			queue_free()
+			return
+		queue_redraw()
+
+	func _draw() -> void:
+		var progress: float = age / lifetime
+		var current_radius: float = radius * (0.5 + 0.5 * progress)
+		var alpha: float = 0.6 * (1.0 - progress)
+		var ring_color := Color(0.6, 0.3, 0.9, alpha)
+		var fill_color := Color(0.5, 0.2, 0.8, alpha * 0.2)
+		draw_circle(center, current_radius, fill_color)
+		var segments: int = 24
+		var prev: Vector2 = center + Vector2(current_radius, 0)
+		for i in range(1, segments + 1):
+			var a: float = TAU * float(i) / float(segments)
+			var next: Vector2 = center + Vector2(cos(a), sin(a)) * current_radius
+			draw_line(prev, next, ring_color, 2.0)
+			prev = next

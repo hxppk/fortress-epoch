@@ -114,6 +114,13 @@ func load_stage(stage_id: String) -> void:
 	for stage: Dictionary in stages:
 		if stage.get("id", "") == stage_id:
 			current_stage_data = stage
+			# 应用阶段级别的伤害倍率（如有），否则回退到全局配置
+			var stage_multipliers: Dictionary = stage.get("balance_multipliers", {})
+			if not stage_multipliers.is_empty():
+				GameManager.load_balance_multipliers(stage_multipliers)
+			# 预热对象池
+			if enemy_pool and enemy_pool.has_method("prewarm_for_stage"):
+				enemy_pool.prewarm_for_stage(stage)
 			return
 
 	push_warning("WaveSpawner: 未找到阶段 id=%s" % stage_id)
@@ -153,6 +160,7 @@ func start_next_wave() -> void:
 		var is_continuous: bool = enemy_config.get("spawn_continuous", false)
 		var spawn_rate: int = int(enemy_config.get("spawn_rate", 1))
 		var spawn_interval: float = float(enemy_config.get("spawn_interval", 5.0))
+		var hp_mult: float = float(enemy_config.get("hp_multiplier", 1.0))
 
 		# 为每个路线平均分配（如果有多条路线，轮流从各路线生成）
 		var assigned_route: String = routes[0] if routes.size() > 0 else "north"
@@ -173,6 +181,7 @@ func start_next_wave() -> void:
 				"continuous_timer": 0.0,
 				"routes": routes,
 				"route_index": 0,
+				"hp_multiplier": hp_mult,
 			}
 			spawn_timers.append(spawn_entry)
 		else:
@@ -191,6 +200,7 @@ func start_next_wave() -> void:
 				"continuous_timer": 0.0,
 				"routes": routes,
 				"route_index": 0,
+				"hp_multiplier": hp_mult,
 			}
 			spawn_timers.append(spawn_entry)
 
@@ -213,6 +223,8 @@ func _process(delta: float) -> void:
 			all_finished = false
 			continue
 
+		var hp_mult: float = entry.get("hp_multiplier", 1.0)
+
 		if entry["is_continuous"]:
 			# 持续生成逻辑
 			all_finished = false  # 持续生成永远不会自行结束
@@ -223,7 +235,7 @@ func _process(delta: float) -> void:
 				var routes: Array = entry["routes"]
 				for i in range(entry["spawn_rate"]):
 					var route: String = _get_next_route(entry, routes)
-					_spawn_enemy(entry["type"], route)
+					_spawn_enemy(entry["type"], route, hp_mult)
 		else:
 			# 固定数量生成逻辑
 			if entry["remaining"] <= 0:
@@ -235,7 +247,7 @@ func _process(delta: float) -> void:
 				entry["timer"] -= entry["interval"]
 				var routes: Array = entry["routes"]
 				var route: String = _get_next_route(entry, routes)
-				_spawn_enemy(entry["type"], route)
+				_spawn_enemy(entry["type"], route, hp_mult)
 				entry["remaining"] -= 1
 				_total_spawned += 1
 
@@ -248,7 +260,7 @@ func _process(delta: float) -> void:
 # ============================================================
 
 ## 在指定路线生成一个敌人
-func _spawn_enemy(type: String, route: String) -> void:
+func _spawn_enemy(type: String, route: String, hp_multiplier: float = 1.0) -> void:
 	var spawn_pos: Vector2 = _get_spawn_position(route)
 
 	# 添加随机偏移
@@ -292,6 +304,13 @@ func _spawn_enemy(type: String, route: String) -> void:
 		elif "is_active" in enemy:
 			enemy.is_active = true
 			enemy.visible = true
+
+	# 应用 HP 倍率
+	if hp_multiplier != 1.0 and enemy != null:
+		if "stats" in enemy and enemy.stats is StatsComponent:
+			var base_hp: float = enemy.stats.max_hp
+			enemy.stats.max_hp = base_hp * hp_multiplier
+			enemy.stats.current_hp = enemy.stats.max_hp
 
 	# 加入 enemies 分组
 	if not enemy.is_in_group("enemies"):

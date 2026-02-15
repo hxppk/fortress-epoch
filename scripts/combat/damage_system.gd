@@ -66,6 +66,17 @@ func apply_damage(attacker: Node2D, defender: Node2D, damage_info: Dictionary) -
 		if attacker_sprite and CombatFeedback.has_method("hit_scale_effect"):
 			CombatFeedback.hit_scale_effect(attacker_sprite)
 
+		# 帧冻结：暴击更强，普通命中轻微
+		if damage_info.get("is_crit", false):
+			CombatFeedback.hitstop(5)
+		else:
+			CombatFeedback.hitstop(2)
+
+		# 击退视觉
+		if CombatFeedback.has_method("knockback_visual"):
+			var kb_dist: float = 5.0 if not damage_info.get("is_crit", false) else 10.0
+			CombatFeedback.knockback_visual(defender, attacker.global_position, kb_dist)
+
 # ============================================================
 # 飘字
 # ============================================================

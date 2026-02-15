@@ -77,6 +77,9 @@ func _load_cards_from_json() -> void:
 ## respects hero_filter.
 func draw_three(current_wave: int, total_waves: int, hero_id: String) -> Array[CardData]:
 	var categories: Array[String] = ["skill", "attribute", "resource"]
+	# 如果铸造所已建成，装备卡可以出现在三选一中
+	if _is_forge_built():
+		categories.append("equipment")
 	categories.shuffle()
 
 	var result: Array[CardData] = []
@@ -191,8 +194,11 @@ func _pick_any_available(hero_id: String, exclude: Array) -> CardData:
 
 
 ## Check whether a card should be excluded (already in this draw or already
-## selected this run).
+## selected this run, or building prerequisite not met).
 func _is_excluded(card: CardData, exclude: Array) -> bool:
+	# 装备卡需要铸造所已建成才能出现
+	if card.category == "equipment" and not _is_forge_built():
+		return true
 	for c in exclude:
 		if c != null and c.id == card.id:
 			return true
@@ -216,3 +222,14 @@ func get_selected_cards() -> Array[CardData]:
 ## Reset pool state for a fresh run.
 func reset() -> void:
 	selected_cards.clear()
+
+# ── Building checks ────────────────────────────────────────────────────────
+
+## Check whether the tech forge building has been constructed.
+## The forge registers its level in GameManager meta when placed.
+func _is_forge_built() -> bool:
+	if not is_instance_valid(GameManager):
+		return false
+	if GameManager.has_meta("tech_forge_level"):
+		return int(GameManager.get_meta("tech_forge_level")) >= 1
+	return false

@@ -1,7 +1,7 @@
 class_name SkillSystem
 extends Node
 ## SkillSystem -- 管理英雄主动技能 CD + 终极技蓄力
-## 从 heroes.json 技能数据初始化，处理冷却、释放和效果执行。
+## 从 heroes.json 技能数据初始化，通过 SkillResource 脚本调度技能执行。
 
 # ============================================================
 # 信号
@@ -20,26 +20,49 @@ signal cooldown_updated(slot: int, remaining: float, total: float)
 ## 所有者英雄节点
 var hero: Node2D = null
 
-## 技能字典 { skill_id: { "data": Dictionary, "cooldown_remaining": float, "cooldown_total": float, "is_ready": bool, "slot": int } }
+## 技能槽 { skill_id: { "data": Dictionary, "resource": SkillResource, "cooldown_remaining": float, "cooldown_total": float, "is_ready": bool, "slot": int } }
 var skills: Dictionary = {}
 
 ## 终极技蓄力进度
 var ultimate_charge: float = 0.0
 
-## 终极技满蓄力值（白狼 kill 50 / 法师 damage 3000）
+## 终极技满蓄力值
 var ultimate_max_charge: float = 50.0
 
-## 终极技蓄力类型："kill_count" | "damage_dealt"
+## 终极技蓄力类型："kill_count" | "damage_dealt" | "skill_hit" | "pull_count"
 var ultimate_charge_type: String = "kill_count"
 
 ## 终极技数据
 var ultimate_data: Dictionary = {}
+
+## 终极技 SkillResource
+var ultimate_resource: SkillResource = null
 
 ## 英雄属性组件引用
 var _stats: StatsComponent = null
 
 ## 英雄完整数据缓存
 var _hero_data: Dictionary = {}
+
+## 技能资源注册表 { skill_id: 脚本路径 }
+static var _skill_registry: Dictionary = {
+	# 白狼骑士
+	"wolf_rush": "res://scripts/combat/skills/wolf_rush.gd",
+	"wolf_howl": "res://scripts/combat/skills/wolf_howl.gd",
+	"wolf_form": "res://scripts/combat/skills/wolf_form.gd",
+	# 流星法师
+	"meteor_shower": "res://scripts/combat/skills/meteor_shower.gd",
+	"comet_strike": "res://scripts/combat/skills/comet_strike.gd",
+	"celestial_fall": "res://scripts/combat/skills/celestial_fall.gd",
+	# 辉石法师
+	"prism_refract": "res://scripts/combat/skills/prism_refract.gd",
+	"gem_cage": "res://scripts/combat/skills/gem_cage.gd",
+	"rainbow_prism": "res://scripts/combat/skills/rainbow_prism.gd",
+	# 重力法师
+	"gravity_well": "res://scripts/combat/skills/gravity_well.gd",
+	"gravity_flip": "res://scripts/combat/skills/gravity_flip.gd",
+	"singularity_collapse": "res://scripts/combat/skills/singularity_collapse.gd",
+}
 
 # ============================================================
 # 初始化
@@ -58,19 +81,24 @@ func initialize(hero_node: Node2D, hero_data: Dictionary) -> void:
 	var skill_list: Array = hero_data.get("skills", [])
 	skills.clear()
 	ultimate_data = {}
+	ultimate_resource = null
 
 	for skill: Dictionary in skill_list:
 		var skill_type: String = skill.get("type", "")
-		var skill_id: String = skill.get("id", "")
+		var sid: String = skill.get("id", "")
 
 		match skill_type:
 			"active":
 				var slot: int = int(skill.get("slot", 0))
-				var cooldown: float = float(skill.get("cooldown", 10.0))
-				skills[skill_id] = {
+				var cd: float = float(skill.get("cooldown", 10.0))
+				var res: SkillResource = _load_skill_resource(sid)
+				if res:
+					res.cooldown = cd
+				skills[sid] = {
 					"data": skill,
+					"resource": res,
 					"cooldown_remaining": 0.0,
-					"cooldown_total": cooldown,
+					"cooldown_total": cd,
 					"is_ready": true,
 					"slot": slot,
 				}
@@ -80,8 +108,9 @@ func initialize(hero_node: Node2D, hero_data: Dictionary) -> void:
 				ultimate_charge_type = charge_cond.get("type", "kill_count")
 				ultimate_max_charge = float(charge_cond.get("value", 50))
 				ultimate_charge = 0.0
+				ultimate_resource = _load_skill_resource(sid)
 
-	# 连接 GameManager 的统计信号用于终极技蓄力
+	# 连接蓄力信号
 	_connect_charge_signals()
 
 # ============================================================
@@ -93,8 +122,8 @@ func _process(delta: float) -> void:
 		return
 
 	# 更新所有技能冷却
-	for skill_id: String in skills:
-		var skill_entry: Dictionary = skills[skill_id]
+	for sid: String in skills:
+		var skill_entry: Dictionary = skills[sid]
 		if skill_entry["cooldown_remaining"] > 0.0:
 			skill_entry["cooldown_remaining"] = maxf(skill_entry["cooldown_remaining"] - delta, 0.0)
 			var slot: int = skill_entry["slot"]
@@ -102,7 +131,7 @@ func _process(delta: float) -> void:
 
 			if skill_entry["cooldown_remaining"] <= 0.0 and not skill_entry["is_ready"]:
 				skill_entry["is_ready"] = true
-				skill_ready.emit(skill_id)
+				skill_ready.emit(sid)
 
 # ============================================================
 # 技能可用性
@@ -110,8 +139,8 @@ func _process(delta: float) -> void:
 
 ## 指定槽位的技能是否可用（slot 1 或 2）
 func can_use_skill(slot: int) -> bool:
-	for skill_id: String in skills:
-		var entry: Dictionary = skills[skill_id]
+	for sid: String in skills:
+		var entry: Dictionary = skills[sid]
 		if entry["slot"] == slot:
 			return entry["is_ready"]
 	return false
@@ -119,34 +148,21 @@ func can_use_skill(slot: int) -> bool:
 
 ## 释放指定槽位的技能
 func use_skill(slot: int) -> void:
-	for skill_id: String in skills:
-		var entry: Dictionary = skills[skill_id]
+	for sid: String in skills:
+		var entry: Dictionary = skills[sid]
 		if entry["slot"] == slot and entry["is_ready"]:
 			entry["is_ready"] = false
 			entry["cooldown_remaining"] = entry["cooldown_total"]
-			_execute_skill(entry["data"])
-			skill_used.emit(skill_id)
+
+			var res: SkillResource = entry.get("resource") as SkillResource
+			if res:
+				res.execute(hero, _stats, self)
+			else:
+				push_warning("SkillSystem: 技能 '%s' 无 SkillResource 实例" % sid)
+
+			skill_used.emit(sid)
 			cooldown_updated.emit(slot, entry["cooldown_remaining"], entry["cooldown_total"])
 			return
-
-# ============================================================
-# 技能执行分发
-# ============================================================
-
-## 执行具体技能效果
-func _execute_skill(skill_data: Dictionary) -> void:
-	var skill_id: String = skill_data.get("id", "")
-	match skill_id:
-		"wolf_rush":
-			_execute_wolf_rush()
-		"wolf_howl":
-			_execute_wolf_howl()
-		"meteor_shower":
-			_execute_meteor_shower()
-		"comet_strike":
-			_execute_comet_strike()
-		_:
-			push_warning("SkillSystem: 未实现的技能 id=%s" % skill_id)
 
 # ============================================================
 # 终极技蓄力
@@ -160,7 +176,6 @@ func add_ultimate_charge(amount: float) -> void:
 	var prev_charge: float = ultimate_charge
 	ultimate_charge = minf(ultimate_charge + amount, ultimate_max_charge)
 
-	# 蓄力刚满时发信号
 	if prev_charge < ultimate_max_charge and ultimate_charge >= ultimate_max_charge:
 		ultimate_charged.emit()
 
@@ -179,246 +194,34 @@ func use_ultimate() -> void:
 
 	ultimate_charge = 0.0
 
-	var skill_id: String = ultimate_data.get("id", "")
-	match skill_id:
-		"wolf_form":
-			_execute_wolf_form()
-		"celestial_fall":
-			_execute_celestial_fall()
-		_:
-			push_warning("SkillSystem: 未实现的终极技 id=%s" % skill_id)
+	if ultimate_resource:
+		ultimate_resource.execute(hero, _stats, self)
+	else:
+		var sid: String = ultimate_data.get("id", "")
+		push_warning("SkillSystem: 终极技 '%s' 无 SkillResource 实例" % sid)
 
 	ultimate_used.emit()
 
 # ============================================================
-# 白狼骑士 -- 技能实现
+# 技能资源加载
 # ============================================================
 
-## 奔狼突袭：短距冲刺 + 路径伤害 + 减速
-func _execute_wolf_rush() -> void:
-	if hero == null or _stats == null:
-		return
-
-	var atk: float = _stats.get_stat("attack")
-	var rush_damage: float = atk * 2.0
-	var rush_distance: float = 80.0
-	var slow_duration: float = 2.0
-
-	# 应用卡牌特定技能修改
-	var specific_mods: Array = CardEffects.get_specific_skill_modifiers(self, "wolf_rush")
-	for mod: Dictionary in specific_mods:
-		if mod.has("damage_bonus"):
-			rush_damage *= (1.0 + float(mod["damage_bonus"]))
-		if mod.has("slow_duration_bonus"):
-			slow_duration += float(mod["slow_duration_bonus"])
-
-	# 应用卡牌全局范围倍率
-	var range_mult: float = CardEffects.get_skill_range_multiplier(self)
-	rush_distance *= range_mult
-
-	# 计算冲刺方向（面朝方向）
-	var direction: Vector2 = Vector2.RIGHT
-	if hero.has_method("get") and hero.get("facing_right") != null:
-		direction = Vector2.RIGHT if hero.facing_right else Vector2.LEFT
-	elif hero.has_method("get") and hero.get("move_direction") != null:
-		if hero.move_direction != Vector2.ZERO:
-			direction = hero.move_direction.normalized()
-
-	var start_pos: Vector2 = hero.global_position
-	var end_pos: Vector2 = start_pos + direction * rush_distance
-
-	# 在冲刺前记录攻击范围内的敌人（路径上的）
-	var enemies_on_path: Array = _get_enemies_on_path(start_pos, end_pos, 24.0)
-
-	# 使用 Tween 让英雄快速移动到目标位置
-	var tween: Tween = hero.create_tween()
-	tween.tween_property(hero, "global_position", end_pos, 0.15).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
-
-	# 对路径上的敌人造成伤害和减速
-	for enemy: Node2D in enemies_on_path:
-		if not is_instance_valid(enemy):
-			continue
-		_deal_skill_damage(enemy, rush_damage)
-		_apply_slow(enemy, 0.3, slow_duration)
-
-
-## 狼嚎战吼：AOE 恐惧 + 护盾
-func _execute_wolf_howl() -> void:
-	if hero == null or _stats == null:
-		return
-
-	var howl_radius: float = 64.0
-	# 应用卡牌全局范围倍率
-	howl_radius *= CardEffects.get_skill_range_multiplier(self)
-	var hero_pos: Vector2 = hero.global_position
-
-	# 获取范围内的所有敌人
-	var enemies: Array = _get_enemies_in_radius(hero_pos, howl_radius)
-
-	# 对所有敌人施加恐惧 2 秒
-	for enemy: Node2D in enemies:
-		if not is_instance_valid(enemy):
-			continue
-		_apply_fear(enemy, 2.0)
-
-	# 英雄获得护盾（额外 30 HP）
-	_stats.add_modifier("hp", "wolf_howl_shield", 30.0)
-	_stats.current_hp = minf(_stats.current_hp + 30.0, _stats.max_hp)
-	_stats.health_changed.emit(_stats.current_hp, _stats.max_hp)
-
-	# 5 秒后移除护盾
-	if hero.is_inside_tree():
-		hero.get_tree().create_timer(5.0).timeout.connect(
-			func() -> void:
-				if _stats and is_instance_valid(hero):
-					_stats.remove_modifier("hp", "wolf_howl_shield")
-		)
-
-
-## 白狼化身：变身 8 秒，攻击范围 x1.5，攻速 +50%
-func _execute_wolf_form() -> void:
-	if hero == null or _stats == null:
-		return
-
-	var duration: float = float(ultimate_data.get("duration", 8.0))
-	var range_bonus: float = float(ultimate_data.get("attack_range_bonus", 1.5))
-	var speed_bonus: float = float(ultimate_data.get("attack_speed_bonus", 0.5))
-
-	# 攻击范围加成（乘法 -> 加上额外部分）
-	var base_range: float = _stats.get_stat("attack_range")
-	var extra_range: float = base_range * (range_bonus - 1.0)
-	_stats.add_modifier("attack_range", "wolf_form_range", extra_range)
-
-	# 攻速加成
-	var base_attack_speed: float = _stats.get_stat("attack_speed")
-	var extra_speed: float = base_attack_speed * speed_bonus
-	_stats.add_modifier("attack_speed", "wolf_form_speed", extra_speed)
-
-	# duration 秒后移除所有变身加成
-	if hero.is_inside_tree():
-		hero.get_tree().create_timer(duration).timeout.connect(
-			func() -> void:
-				if _stats and is_instance_valid(hero):
-					_stats.remove_modifier("attack_range", "wolf_form_range")
-					_stats.remove_modifier("attack_speed", "wolf_form_speed")
-		)
+## 根据 skill_id 加载对应的 SkillResource 实例
+func _load_skill_resource(sid: String) -> SkillResource:
+	var path: String = _skill_registry.get(sid, "")
+	if path == "":
+		push_warning("SkillSystem: 技能注册表中未找到 '%s'" % sid)
+		return null
+	if not ResourceLoader.exists(path):
+		push_warning("SkillSystem: 技能脚本不存在 '%s'" % path)
+		return null
+	var script: GDScript = load(path) as GDScript
+	if script == null:
+		return null
+	return script.new() as SkillResource
 
 # ============================================================
-# 流星法师 -- 技能实现
-# ============================================================
-
-## 流星雨：区域持续伤害 3 秒，每 0.5 秒 tick，减速 30%
-func _execute_meteor_shower() -> void:
-	if hero == null or _stats == null:
-		return
-	if not hero.is_inside_tree():
-		return
-
-	var spell_power: float = _stats.get_stat("spell_power")
-	var tick_damage: float = spell_power * 0.5
-	var duration: float = 3.0
-	var tick_interval: float = 0.5
-	var radius: float = 64.0
-	var slow_percent: float = 0.3
-
-	# 应用卡牌特定技能修改
-	var specific_mods: Array = CardEffects.get_specific_skill_modifiers(self, "meteor_shower")
-	for mod: Dictionary in specific_mods:
-		if mod.has("duration_bonus"):
-			duration += float(mod["duration_bonus"])
-		if mod.has("slow_bonus"):
-			slow_percent += float(mod["slow_bonus"])
-
-	# 应用卡牌全局范围倍率
-	var range_mult: float = CardEffects.get_skill_range_multiplier(self)
-	radius *= range_mult
-
-	# 以最近敌人位置为中心（如果没有则以英雄前方为中心）
-	var center: Vector2 = hero.global_position + Vector2(60, 0)
-	var nearest: Node2D = _get_nearest_enemy()
-	if nearest:
-		center = nearest.global_position
-
-	# 使用定时器实现持续 tick 伤害
-	var ticks_total: int = int(duration / tick_interval)
-	var tick_count: int = 0
-
-	var tick_timer: Timer = Timer.new()
-	tick_timer.wait_time = tick_interval
-	tick_timer.one_shot = false
-	hero.add_child(tick_timer)
-	tick_timer.start()
-
-	tick_timer.timeout.connect(
-		func() -> void:
-			tick_count += 1
-			# 对范围内的敌人造成伤害和减速
-			var enemies: Array = _get_enemies_in_radius(center, radius)
-			for enemy: Node2D in enemies:
-				if not is_instance_valid(enemy):
-					continue
-				_deal_skill_damage(enemy, tick_damage)
-				_apply_slow(enemy, slow_percent, tick_interval + 0.1)
-
-			if tick_count >= ticks_total:
-				tick_timer.stop()
-				tick_timer.queue_free()
-	)
-
-
-## 彗星撞击：直线高伤 + 击退
-func _execute_comet_strike() -> void:
-	if hero == null or _stats == null:
-		return
-
-	var atk: float = _stats.get_stat("attack")
-	var strike_damage: float = atk * 3.5
-	var knockback_force: float = 100.0
-
-	# 面朝方向
-	var direction: Vector2 = Vector2.RIGHT
-	if hero.get("facing_right") != null:
-		direction = Vector2.RIGHT if hero.facing_right else Vector2.LEFT
-	elif hero.get("move_direction") != null and hero.move_direction != Vector2.ZERO:
-		direction = hero.move_direction.normalized()
-
-	var start_pos: Vector2 = hero.global_position
-	var projectile_range: float = 120.0
-	# 应用卡牌全局范围倍率
-	projectile_range *= CardEffects.get_skill_range_multiplier(self)
-
-	# 在直线路径上检测敌人
-	var enemies_on_line: Array = _get_enemies_on_path(start_pos, start_pos + direction * projectile_range, 16.0)
-
-	for enemy: Node2D in enemies_on_line:
-		if not is_instance_valid(enemy):
-			continue
-		_deal_skill_damage(enemy, strike_damage)
-		_apply_knockback(enemy, direction, knockback_force)
-
-
-## 天陨：巨型 AOE，spell_power * 10
-func _execute_celestial_fall() -> void:
-	if hero == null or _stats == null:
-		return
-
-	var spell_power: float = _stats.get_stat("spell_power")
-	var fall_damage: float = spell_power * 10.0
-	var radius: float = float(ultimate_data.get("radius", 128))
-	# 应用卡牌全局范围倍率
-	radius *= CardEffects.get_skill_range_multiplier(self)
-
-	# 以英雄为中心
-	var center: Vector2 = hero.global_position
-
-	var enemies: Array = _get_enemies_in_radius(center, radius)
-	for enemy: Node2D in enemies:
-		if not is_instance_valid(enemy):
-			continue
-		_deal_skill_damage(enemy, fall_damage)
-
-# ============================================================
-# 效果应用
+# 效果应用（供 SkillResource 脚本调用）
 # ============================================================
 
 ## 对目标造成技能伤害
@@ -441,15 +244,18 @@ func _deal_skill_damage(target: Node2D, raw_damage: float) -> void:
 	var final_damage: int = maxi(int(modified_damage - defense), 1)
 	target_stats.take_damage(float(final_damage))
 
-	# 记录伤害（击杀统计由 EnemyBase.die() 负责）
+	# 记录伤害
 	var gm: Node = _get_game_manager()
 	if gm and gm.has_method("record_damage"):
 		gm.record_damage(float(final_damage))
 
-	# 飘字：使用 DamageSystem
-	var damage_system: Node = DamageSystem
-	if damage_system and damage_system.has_method("create_damage_number"):
-		damage_system.create_damage_number(target.global_position, final_damage, false)
+	# 飘字
+	if DamageSystem and DamageSystem.has_method("create_damage_number"):
+		DamageSystem.create_damage_number(target.global_position, final_damage, false)
+
+	# 终极技蓄力（伤害型）
+	if ultimate_charge_type == "damage_dealt":
+		add_ultimate_charge(float(final_damage))
 
 
 ## 对目标施加减速效果
@@ -466,8 +272,7 @@ func _apply_slow(target: Node2D, slow_percent: float, duration: float) -> void:
 
 	target_stats.add_modifier("speed", source_id, slow_amount)
 
-	# duration 后移除减速
-	if hero.is_inside_tree():
+	if hero and hero.is_inside_tree():
 		hero.get_tree().create_timer(duration).timeout.connect(
 			func() -> void:
 				if is_instance_valid(target) and target.has_node("StatsComponent"):
@@ -476,20 +281,17 @@ func _apply_slow(target: Node2D, slow_percent: float, duration: float) -> void:
 		)
 
 
-## 对目标施加恐惧效果（2 秒反向移动）
+## 对目标施加恐惧效果（反向移动）
 func _apply_fear(target: Node2D, duration: float) -> void:
 	if not is_instance_valid(target):
 		return
 
-	# 在 EnemyBase 中设置 is_feared 标志
-	if target.has_method("set") and "is_feared" in target:
+	if "is_feared" in target:
 		target.is_feared = true
 	else:
-		# 如果目标没有 is_feared 属性，用 meta 标记
 		target.set_meta("is_feared", true)
 
-	# duration 后解除恐惧
-	if hero.is_inside_tree():
+	if hero and hero.is_inside_tree():
 		hero.get_tree().create_timer(duration).timeout.connect(
 			func() -> void:
 				if is_instance_valid(target):
@@ -508,7 +310,6 @@ func _apply_knockback(target: Node2D, direction: Vector2, force: float) -> void:
 	var knockback_offset: Vector2 = direction.normalized() * force
 	var target_pos: Vector2 = target.global_position
 
-	# 使用 Tween 实现平滑击退
 	var tween: Tween = target.create_tween()
 	tween.tween_property(target, "global_position", target_pos + knockback_offset, 0.2).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
 
@@ -516,10 +317,8 @@ func _apply_knockback(target: Node2D, direction: Vector2, force: float) -> void:
 # 终极技蓄力信号连接
 # ============================================================
 
-## 连接 GameManager 的统计信号
 func _connect_charge_signals() -> void:
 	if hero == null or not hero.is_inside_tree():
-		# 延迟到 ready 时再连接
 		if hero:
 			hero.ready.connect(_connect_charge_signals, CONNECT_ONE_SHOT)
 		return
@@ -534,12 +333,13 @@ func _connect_charge_signals() -> void:
 				if not gm.kill_recorded.is_connected(_on_kill_recorded):
 					gm.kill_recorded.connect(_on_kill_recorded)
 		"damage_dealt":
-			# GameManager 没有 damage_recorded 信号，用 _process 轮询
-			# 或在 _deal_skill_damage 中主动调用 add_ultimate_charge
-			pass
+			pass  # 在 _deal_skill_damage 中主动调用
+		"skill_hit":
+			pass  # 在各 SkillResource.execute 中主动调用
+		"pull_count":
+			pass  # 在重力法师技能中主动调用
 
 
-## 击杀回调：每次击杀增加 1 点蓄力
 func _on_kill_recorded(_total_kills: int) -> void:
 	if ultimate_charge_type == "kill_count":
 		add_ultimate_charge(1.0)
@@ -548,12 +348,10 @@ func _on_kill_recorded(_total_kills: int) -> void:
 # 工具方法
 # ============================================================
 
-## 获取 GameManager 引用
 func _get_game_manager() -> Node:
 	return GameManager
 
 
-## 获取最近的敌人（遍历场景树中 "enemies" 组）
 func _get_nearest_enemy() -> Node2D:
 	if hero == null or not hero.is_inside_tree():
 		return null
@@ -577,7 +375,6 @@ func _get_nearest_enemy() -> Node2D:
 	return nearest
 
 
-## 获取圆形范围内的敌人
 func _get_enemies_in_radius(center: Vector2, radius: float) -> Array:
 	var result: Array = []
 	if hero == null or not hero.is_inside_tree():
@@ -598,7 +395,6 @@ func _get_enemies_in_radius(center: Vector2, radius: float) -> Array:
 	return result
 
 
-## 获取路径上的敌人（以 start->end 为中心线，half_width 为半宽）
 func _get_enemies_on_path(start: Vector2, end: Vector2, half_width: float) -> Array:
 	var result: Array = []
 	if hero == null or not hero.is_inside_tree():
@@ -621,7 +417,6 @@ func _get_enemies_on_path(start: Vector2, end: Vector2, half_width: float) -> Ar
 			var proj_along: float = to_enemy.dot(path_dir)
 			var proj_perp: float = absf(to_enemy.dot(path_normal))
 
-			# 在路径长度范围内且垂直距离在半宽内
 			if proj_along >= 0.0 and proj_along <= path_length and proj_perp <= half_width:
 				result.append(enemy)
 

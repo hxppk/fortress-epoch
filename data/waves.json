@@ -19,6 +19,11 @@
       "id": "stage_1_tutorial",
       "name": "引导阶段",
       "stage_number": 1,
+      "balance_multipliers": {
+        "hero_damage": 0.6,
+        "tower_damage": 1.8,
+        "npc_damage": 1.6
+      },
       "waves": [
         {
           "id": "wave_1_1",
@@ -49,56 +54,61 @@
       "id": "stage_2",
       "name": "第二阶段",
       "stage_number": 2,
+      "balance_multipliers": {
+        "hero_damage": 0.8,
+        "tower_damage": 1.4,
+        "npc_damage": 1.6
+      },
       "waves": [
         {
           "id": "wave_2_1",
           "label": "热身",
           "tension": 1,
           "enemies": [
-            { "type": "skeleton", "count": 30, "interval": 0.3 }
+            { "type": "skeleton", "count": 25, "interval": 0.3 }
           ],
           "spawn_routes": ["north"],
-          "duration": 30,
-          "rewards": { "gold": 50, "exp": 30 }
+          "duration": 25,
+          "rewards": { "gold": 60, "exp": 40 }
         },
         {
           "id": "wave_2_2",
           "label": "试探",
           "tension": 2,
           "enemies": [
-            { "type": "skeleton", "count": 30, "interval": 0.25 },
-            { "type": "ghost", "count": 10, "interval": 0.5 }
+            { "type": "skeleton", "count": 25, "interval": 0.25 },
+            { "type": "ghost", "count": 8, "interval": 0.5 }
           ],
           "spawn_routes": ["north", "east"],
-          "duration": 40,
-          "rewards": { "gold": 40, "exp": 40 }
+          "duration": 35,
+          "rewards": { "gold": 55, "exp": 50 }
         },
         {
           "id": "wave_2_3",
           "label": "策略",
           "tension": 3,
           "enemies": [
-            { "type": "skeleton", "count": 25, "interval": 0.2 },
-            { "type": "zombie", "count": 15, "interval": 0.4 },
+            { "type": "skeleton", "count": 20, "interval": 0.2 },
+            { "type": "zombie", "count": 10, "interval": 0.4 },
             { "type": "orc_elite", "count": 1, "interval": 0, "delay": 15 }
           ],
           "spawn_routes": ["north", "east"],
-          "duration": 50,
-          "rewards": { "gold": 60, "crystal": 5, "exp": 60 }
+          "duration": 45,
+          "rewards": { "gold": 70, "crystal": 8, "exp": 70 }
         },
         {
           "id": "wave_2_4",
           "label": "压力",
           "tension": 4,
           "enemies": [
-            { "type": "skeleton", "count": 20, "interval": 0.2 },
-            { "type": "ghost", "count": 15, "interval": 0.3 },
-            { "type": "zombie", "count": 10, "interval": 0.4 },
-            { "type": "orc_elite", "count": 3, "interval": 0, "delay": 10 }
+            { "type": "skeleton", "count": 15, "interval": 0.2 },
+            { "type": "ghost", "count": 12, "interval": 0.3 },
+            { "type": "zombie", "count": 12, "interval": 0.4 },
+            { "type": "orc_elite", "count": 2, "interval": 0, "delay": 10 }
           ],
           "spawn_routes": ["north", "east"],
-          "duration": 60,
-          "rewards": { "gold": 80, "crystal": 8, "exp": 80 }
+          "duration": 55,
+          "rewards": { "gold": 90, "crystal": 12, "badge": 3, "exp": 90 }
         },
         {
           "id": "wave_2_5",
@@ -106,11 +116,89 @@
           "tension": 5,
           "enemies": [
             { "type": "demon_boss", "count": 1, "interval": 0, "delay": 5 },
-            { "type": "skeleton", "count": 0, "spawn_continuous": true, "spawn_rate": 5, "spawn_interval": 12 }
+            { "type": "skeleton", "count": 0, "spawn_continuous": true, "spawn_rate": 6, "spawn_interval": 8 }
           ],
           "spawn_routes": ["north", "east"],
           "duration": 60,
-          "rewards": { "gold": 150, "crystal": 15, "badge": 5, "exp": 150 }
+          "rewards": { "gold": 180, "crystal": 20, "badge": 8, "exp": 180 }
+        }
+      ]
+    },
+    {
+      "id": "stage_3",
+      "name": "第三阶段",
+      "stage_number": 3,
+      "balance_multipliers": {
+        "hero_damage": 1.0,
+        "tower_damage": 1.2,
+        "npc_damage": 1.8
+      },
+      "waves": [
+        {
+          "id": "wave_3_1",
+          "label": "热身",
+          "tension": 2,
+          "enemies": [
+            { "type": "skeleton", "count": 30, "interval": 0.25, "hp_multiplier": 1.5 },
+            { "type": "ghost", "count": 5, "interval": 0.6, "hp_multiplier": 1.5, "delay": 5 }
+          ],
+          "spawn_routes": ["north", "east"],
+          "duration": 30,
+          "rewards": { "gold": 80, "crystal": 10, "exp": 60 }
+        },
+        {
+          "id": "wave_3_2",
+          "label": "试探",
+          "tension": 3,
+          "enemies": [
+            { "type": "skeleton", "count": 25, "interval": 0.2 },
+            { "type": "zombie", "count": 10, "interval": 0.4, "delay": 5 },
+            { "type": "orc_elite", "count": 2, "interval": 0, "delay": 15 }
+          ],
+          "spawn_routes": ["north", "east", "south"],
+          "duration": 40,
+          "rewards": { "gold": 75, "crystal": 15, "exp": 75 }
+        },
+        {
+          "id": "wave_3_3",
+          "label": "策略",
+          "tension": 4,
+          "enemies": [
+            { "type": "skeleton", "count": 20, "interval": 0.2 },
+            { "type": "ghost", "count": 8, "interval": 0.4, "delay": 3 },
+            { "type": "zombie", "count": 12, "interval": 0.35, "delay": 5 },
+            { "type": "orc_elite", "count": 3, "interval": 0, "delay": 20 }
+          ],
+          "spawn_routes": ["north", "east", "south"],
+          "duration": 50,
+          "rewards": { "gold": 100, "crystal": 18, "badge": 5, "exp": 100 }
+        },
+        {
+          "id": "wave_3_4",
+          "label": "压力",
+          "tension": 4,
+          "enemies": [
+            { "type": "skeleton", "count": 15, "interval": 0.2 },
+            { "type": "ghost", "count": 10, "interval": 0.3, "delay": 3 },
+            { "type": "zombie", "count": 15, "interval": 0.3, "delay": 5 },
+            { "type": "orc_elite", "count": 4, "interval": 0, "delay": 15 },
+            { "type": "orc_elite", "count": 1, "interval": 0, "delay": 30, "hp_multiplier": 2.0 }
+          ],
+          "spawn_routes": ["north", "east", "south", "west"],
+          "duration": 60,
+          "rewards": { "gold": 120, "crystal": 22, "badge": 8, "exp": 130 }
+        },
+        {
+          "id": "wave_3_5",
+          "label": "BOSS",
+          "tension": 5,
+          "enemies": [
+            { "type": "demon_boss", "count": 1, "interval": 0, "delay": 5, "hp_multiplier": 2.0 },
+            { "type": "skeleton", "count": 0, "spawn_continuous": true, "spawn_rate": 6, "spawn_interval": 6 }
+          ],
+          "spawn_routes": ["north", "east", "south", "west"],
+          "duration": 75,
+          "rewards": { "gold": 250, "crystal": 35, "badge": 15, "exp": 250 }
         }
       ]
     }

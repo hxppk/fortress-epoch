@@ -1,5 +1,8 @@
 extends Control
-## 游戏内 HUD — 显示资源、血池、波次信息
+## 游戏内 HUD — 三级信息层级设计
+## Tier 1 (始终可见): 共享 HP、当前波次
+## Tier 2 (常驻低调): 资源栏、技能冷却、城镇等级
+## Tier 3 (动态显隐): 击杀数、经验进度、连杀提示
 
 @onready var gold_label: Label = $TopBar/GoldLabel
 @onready var crystal_label: Label = $TopBar/CrystalLabel
@@ -15,6 +18,26 @@ extends Control
 var build_buttons: HBoxContainer = null
 var countdown_label: Label = null
 var castle_hp_label: Label = null
+
+# 三级信息层级
+## Tier 3 动态显隐（战斗激烈时自动隐藏）
+var _tier3_nodes: Array[Control] = []
+var _tier3_visible: bool = true
+var _tier3_auto_hide_timer: float = 0.0
+const TIER3_AUTO_HIDE_DELAY: float = 5.0  # 5秒无击杀后显示 tier3
+
+# 低血量警告
+var _low_hp_warning_active: bool = false
+var _low_hp_pulse_timer: float = 0.0
+var _low_hp_overlay: ColorRect = null
+var _low_hp_canvas: CanvasLayer = null
+
+# 阶段/波次追踪
+var _current_stage_index: int = 0
+var _total_stages: int = 3
+
+# 波次清除反馈
+var _wave_clear_label: Label = null
 
 
 func _ready() -> void:
@@ -44,6 +67,14 @@ func _ready() -> void:
 	if kill_label:
 		kill_label.text = "Kills: 0"
 
+	# 技能进度条默认隐藏（等技能系统初始化后由 update_skill_cooldown 显示）
+	if skill1_bar:
+		skill1_bar.visible = false
+	if skill2_bar:
+		skill2_bar.visible = false
+	if ultimate_bar:
+		ultimate_bar.visible = false
+
 	# 连接建筑快捷按钮信号
 	if build_buttons:
 		var arrow_btn := build_buttons.get_node_or_null("ArrowTowerBtn") as Button
@@ -68,11 +99,12 @@ func _ready() -> void:
 	countdown_label.add_theme_color_override("font_shadow_color", Color.BLACK)
 	countdown_label.add_theme_constant_override("shadow_offset_x", 3)
 	countdown_label.add_theme_constant_override("shadow_offset_y", 3)
-	countdown_label.anchors_preset = Control.PRESET_CENTER_TOP
+	countdown_label.set_anchors_preset(Control.PRESET_CENTER_TOP)
 	countdown_label.offset_top = 38.0
 	countdown_label.offset_bottom = 90.0
 	countdown_label.offset_left = -40.0
 	countdown_label.offset_right = 40.0
+	countdown_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	countdown_label.visible = false
 	add_child(countdown_label)
 
@@ -83,13 +115,52 @@ func _ready() -> void:
 	castle_hp_label.add_theme_color_override("font_shadow_color", Color.BLACK)
 	castle_hp_label.add_theme_constant_override("shadow_offset_x", 1)
 	castle_hp_label.add_theme_constant_override("shadow_offset_y", 1)
-	castle_hp_label.anchors_preset = Control.PRESET_BOTTOM_LEFT
+	castle_hp_label.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
 	castle_hp_label.offset_left = 8.0
 	castle_hp_label.offset_top = -60.0
 	castle_hp_label.offset_right = 200.0
 	castle_hp_label.offset_bottom = -42.0
 	castle_hp_label.text = "堡垒生命: %d" % GameManager.shared_hp
 	add_child(castle_hp_label)
+
+	# 注册 Tier 3 节点（战斗激烈时可隐藏）
+	if exp_label:
+		_tier3_nodes.append(exp_label)
+	if kill_label:
+		_tier3_nodes.append(kill_label)
+
+	# 创建低血量警告遮罩
+	_create_low_hp_overlay()
+
+	# 创建波次清除标签
+	_wave_clear_label = Label.new()
+	_wave_clear_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_wave_clear_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_wave_clear_label.add_theme_font_size_override("font_size", 36)
+	_wave_clear_label.add_theme_color_override("font_color", Color(0.3, 1.0, 0.5))
+	_wave_clear_label.add_theme_color_override("font_shadow_color", Color.BLACK)
+	_wave_clear_label.add_theme_constant_override("shadow_offset_x", 2)
+	_wave_clear_label.add_theme_constant_override("shadow_offset_y", 2)
+	_wave_clear_label.set_anchors_preset(Control.PRESET_CENTER)
+	_wave_clear_label.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	_wave_clear_label.grow_vertical = Control.GROW_DIRECTION_BOTH
+	_wave_clear_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_wave_clear_label.visible = false
+	add_child(_wave_clear_label)
+
+
+func _process(delta: float) -> void:
+	# 低血量脉冲效果
+	if _low_hp_warning_active and _low_hp_overlay:
+		_low_hp_pulse_timer += delta * 3.14  # ~ 心跳节奏
+		var alpha: float = 0.08 + 0.07 * sin(_low_hp_pulse_timer)
+		_low_hp_overlay.color = Color(1.0, 0.0, 0.0, alpha)
+
+	# Tier 3 自动隐藏计时（战斗中隐藏杂项信息）
+	if not _tier3_visible:
+		_tier3_auto_hide_timer -= delta
+		if _tier3_auto_hide_timer <= 0.0:
+			_set_tier3_visible(true)
 
 
 func _on_resource_changed(type: String, new_amount: int) -> void:
@@ -111,10 +182,63 @@ func _on_hp_changed(current: int, maximum: int) -> void:
 	if castle_hp_label:
 		castle_hp_label.text = "堡垒生命: %d" % current
 
+	# 低血量警告（< 30%）
+	var hp_ratio: float = float(current) / maxf(float(maximum), 1.0)
+	if hp_ratio < 0.30 and not _low_hp_warning_active:
+		_low_hp_warning_active = true
+		_low_hp_pulse_timer = 0.0
+		if _low_hp_overlay:
+			_low_hp_overlay.visible = true
+	elif hp_ratio >= 0.30 and _low_hp_warning_active:
+		_low_hp_warning_active = false
+		if _low_hp_overlay:
+			_low_hp_overlay.visible = false
 
+	# HP 条颜色变化：绿 -> 黄 -> 红
+	if hp_bar:
+		var bar_style := hp_bar.get_theme_stylebox("fill") as StyleBoxFlat
+		if bar_style == null:
+			bar_style = StyleBoxFlat.new()
+			hp_bar.add_theme_stylebox_override("fill", bar_style)
+		if hp_ratio > 0.6:
+			bar_style.bg_color = Color(0.2, 0.8, 0.2)  # 绿
+		elif hp_ratio > 0.3:
+			bar_style.bg_color = Color(0.9, 0.8, 0.2)  # 黄
+		else:
+			bar_style.bg_color = Color(0.9, 0.2, 0.2)  # 红
+
+
+## 更新波次信息（阶段 + 波次格式）
 func update_wave_info(wave_number: int, label: String) -> void:
 	if wave_label:
-		wave_label.text = "Wave %d: %s" % [wave_number, label]
+		if _current_stage_index > 0:
+			wave_label.text = "Stage %d - Wave %d: %s" % [_current_stage_index, wave_number, label]
+		else:
+			wave_label.text = "Wave %d: %s" % [wave_number, label]
+
+
+## 设置当前阶段索引（由 GameSession/PhaseManager 调用）
+func set_stage_info(stage_index: int, total_stages: int = 3) -> void:
+	_current_stage_index = stage_index
+	_total_stages = total_stages
+
+
+## 显示波次清除反馈
+func show_wave_clear() -> void:
+	if _wave_clear_label == null:
+		return
+	_wave_clear_label.text = "Wave Clear!"
+	_wave_clear_label.visible = true
+	_wave_clear_label.modulate = Color.WHITE
+	_wave_clear_label.scale = Vector2(0.5, 0.5)
+	_wave_clear_label.pivot_offset = _wave_clear_label.size / 2.0
+
+	var tween := create_tween()
+	tween.tween_property(_wave_clear_label, "scale", Vector2(1.2, 1.2), 0.2).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
+	tween.tween_property(_wave_clear_label, "scale", Vector2(1.0, 1.0), 0.1)
+	tween.tween_interval(1.0)
+	tween.tween_property(_wave_clear_label, "modulate:a", 0.0, 0.5)
+	tween.tween_callback(func() -> void: _wave_clear_label.visible = false)
 
 
 func update_skill_cooldown(slot: int, remaining: float, total: float) -> void:
@@ -124,12 +248,16 @@ func update_skill_cooldown(slot: int, remaining: float, total: float) -> void:
 	elif slot == 2:
 		bar = skill2_bar
 	if bar:
+		if not bar.visible:
+			bar.visible = true
 		bar.max_value = total
 		bar.value = total - remaining
 
 
 func update_ultimate_charge(current: float, maximum: float) -> void:
 	if ultimate_bar:
+		if not ultimate_bar.visible:
+			ultimate_bar.visible = true
 		ultimate_bar.max_value = maximum
 		ultimate_bar.value = current
 
@@ -156,6 +284,8 @@ func _on_town_level_up(new_level: int) -> void:
 func _on_kill_recorded(total_kills: int) -> void:
 	if kill_label:
 		kill_label.text = "Kills: %d" % total_kills
+	# 击杀时暂时隐藏 tier3 杂项（战斗激烈中）
+	_tier3_auto_hide_timer = TIER3_AUTO_HIDE_DELAY
 
 
 # ---- 城镇升级通知（屏幕中央大字 Tween 淡出） ----
@@ -247,3 +377,29 @@ func show_tutorial_tip(text: String) -> void:
 	var tween := create_tween()
 	tween.tween_property(tip_panel, "modulate:a", 0.0, 2.0).set_delay(3.0)
 	tween.tween_callback(tip_panel.queue_free)
+
+
+# ============================================================
+# 内部工具
+# ============================================================
+
+## 设置 Tier 3 信息可见性
+func _set_tier3_visible(visible: bool) -> void:
+	_tier3_visible = visible
+	for node: Control in _tier3_nodes:
+		if is_instance_valid(node):
+			node.visible = visible
+
+
+## 创建低血量红色脉冲遮罩
+func _create_low_hp_overlay() -> void:
+	_low_hp_canvas = CanvasLayer.new()
+	_low_hp_canvas.layer = 80
+	add_child(_low_hp_canvas)
+
+	_low_hp_overlay = ColorRect.new()
+	_low_hp_overlay.color = Color(1.0, 0.0, 0.0, 0.0)
+	_low_hp_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_low_hp_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_low_hp_overlay.visible = false
+	_low_hp_canvas.add_child(_low_hp_overlay)

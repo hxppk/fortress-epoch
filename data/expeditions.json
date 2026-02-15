@@ -6,36 +6,50 @@
       "difficulty": "easy",
       "description": "阴暗的地下墓穴中游荡着不死生物，传说深处藏有古老的宝藏。",
       "recommended_power": 50,
-      "duration": 60,
-      "enemy_types": ["skeleton", "ghost"],
-      "boss": {
-        "name": "骷髅领主",
-        "id": "skeleton_lord"
-      },
-      "base_success_rate": 0.70,
       "support": {
         "max_chances": 2,
-        "cost_per_support": { "gold": 30 },
-        "success_rate_bonus": 0.15
+        "types": ["bombard", "heal", "buff"],
+        "cost_per_support": { "gold": 25 }
       },
+      "phases": [
+        {
+          "name": "小怪阶段",
+          "description": "清理墓穴入口的骷髅守卫",
+          "time_limit": 30,
+          "enemies": [
+            { "type": "skeleton", "count": 15, "interval": 0.4 }
+          ],
+          "spawn_routes": ["east"]
+        },
+        {
+          "name": "精英阶段",
+          "description": "兽人精英带领骷髅兵埋伏！",
+          "time_limit": 30,
+          "enemies": [
+            { "type": "orc_elite", "count": 1, "interval": 0, "delay": 2 },
+            { "type": "skeleton", "count": 5, "interval": 0.5 }
+          ],
+          "spawn_routes": ["east"]
+        },
+        {
+          "name": "城堡阶段",
+          "description": "摧毁墓穴深处的邪恶祭坛！",
+          "time_limit": 40,
+          "castle_hp": 500,
+          "enemies": [],
+          "spawn_routes": ["east"]
+        }
+      ],
       "rewards": {
         "success": {
-          "gold": [80, 120],
-          "crystal": [5, 10],
-          "bonus_card_chance": 0.30
+          "gold": [100, 140],
+          "exp": [30, 50]
         },
         "failure": {
           "gold": [20, 40],
-          "crystal": [0, 2]
+          "exp": [10, 20]
         }
-      },
-      "narration": [
-        "英雄踏入了幽暗的墓穴入口...",
-        "骷髅从墙壁的缝隙中涌出！",
-        "一阵阴风吹过，幽灵若隐若现...",
-        "深处传来骨骼碰撞的巨响——骷髅领主出现了！",
-        "战斗结束，英雄在废墟中搜寻战利品。"
-      ]
+      }
     },
     {
       "id": "orc_fortress",
@@ -43,37 +57,129 @@
       "difficulty": "hard",
       "description": "兽人在山间建造了坚固的要塞，内部防守森严，但据说囤积了大量资源。",
       "recommended_power": 80,
-      "duration": 90,
-      "enemy_types": ["orc_elite", "zombie", "skeleton"],
-      "boss": {
-        "name": "兽人战争领主",
-        "id": "orc_warlord"
-      },
-      "base_success_rate": 0.45,
       "support": {
-        "max_chances": 2,
-        "cost_per_support": { "gold": 50 },
-        "success_rate_bonus": 0.15
+        "max_chances": 3,
+        "types": ["bombard", "heal", "buff"],
+        "cost_per_support": { "gold": 40 }
       },
+      "phases": [
+        {
+          "name": "小怪阶段",
+          "description": "突破要塞外围的僵尸和骷髅巡逻队",
+          "time_limit": 35,
+          "enemies": [
+            { "type": "zombie", "count": 10, "interval": 0.4 },
+            { "type": "skeleton", "count": 10, "interval": 0.3, "delay": 3 }
+          ],
+          "spawn_routes": ["east"]
+        },
+        {
+          "name": "精英阶段",
+          "description": "两名兽人精英率领哥布林小队阻击！",
+          "time_limit": 35,
+          "enemies": [
+            { "type": "orc_elite", "count": 2, "interval": 0, "delay": 3 },
+            { "type": "goblin", "count": 8, "interval": 0.4 }
+          ],
+          "spawn_routes": ["east"]
+        },
+        {
+          "name": "城堡阶段",
+          "description": "攻破兽人要塞的核心城堡！",
+          "time_limit": 50,
+          "castle_hp": 1000,
+          "enemies": [
+            { "type": "skeleton", "count": 0, "spawn_continuous": true, "spawn_rate": 3, "spawn_interval": 8 }
+          ],
+          "spawn_routes": ["east"]
+        }
+      ],
       "rewards": {
         "success": {
-          "gold": [150, 200],
-          "crystal": [15, 25],
-          "bonus_card_chance": 0.60
+          "gold": [180, 240],
+          "crystal": [10, 20],
+          "exp": [60, 80]
         },
         "failure": {
           "gold": [30, 60],
-          "crystal": [3, 5]
+          "exp": [15, 30]
         }
+      }
+    },
+    {
+      "id": "shadow_temple",
+      "name": "暗影神殿",
+      "difficulty": "extreme",
+      "description": "被黑暗笼罩的远古神殿，强大的暗影力量在其中沉睡。",
+      "recommended_power": 120,
+      "support": {
+        "max_chances": 3,
+        "types": ["bombard", "heal", "buff"],
+        "cost_per_support": { "gold": 50 }
       },
-      "narration": [
-        "英雄来到了兽人要塞的城墙之下...",
-        "守卫的骷髅兵发现了入侵者！",
-        "僵尸从地下通道中爬出，试图包围英雄！",
-        "兽人精英冲锋而来，战场陷入混乱！",
-        "大地震颤——兽人战争领主带着巨斧走出了要塞！",
-        "激战过后，要塞的大门终于被攻破。"
-      ]
+      "phases": [
+        {
+          "name": "小怪阶段",
+          "description": "穿过幽灵与骷髅环绕的神殿走廊",
+          "time_limit": 40,
+          "enemies": [
+            { "type": "ghost", "count": 20, "interval": 0.3 },
+            { "type": "skeleton", "count": 10, "interval": 0.4, "delay": 5 }
+          ],
+          "spawn_routes": ["east"]
+        },
+        {
+          "name": "精英阶段",
+          "description": "三名兽人精英守护着神殿内殿！",
+          "time_limit": 40,
+          "enemies": [
+            { "type": "orc_elite", "count": 3, "interval": 0, "delay": 2 }
+          ],
+          "spawn_routes": ["east"]
+        },
+        {
+          "name": "BOSS阶段",
+          "description": "暗影之主苏醒了！",
+          "time_limit": 60,
+          "boss_hp": 2000,
+          "enemies": [],
+          "spawn_routes": ["east"]
+        }
+      ],
+      "rewards": {
+        "success": {
+          "gold": [250, 350],
+          "crystal": [30, 50],
+          "exp": [80, 120],
+          "epic_card_chance": 0.3
+        },
+        "failure": {
+          "gold": [40, 80],
+          "exp": [20, 40]
+        }
+      }
     }
-  ]
+  ],
+  "support_types": {
+    "bombard": {
+      "name": "轰炸",
+      "description": "对区域内所有敌人造成范围伤害",
+      "effect": "area_damage",
+      "damage": 150,
+      "radius": 120
+    },
+    "heal": {
+      "name": "治疗",
+      "description": "回复所有英雄30%最大HP",
+      "effect": "heal_heroes",
+      "heal_percent": 0.30
+    },
+    "buff": {
+      "name": "增益",
+      "description": "全队攻击力+20%，持续30秒",
+      "effect": "attack_buff",
+      "attack_bonus_percent": 0.20,
+      "duration": 30.0
+    }
+  }
 }

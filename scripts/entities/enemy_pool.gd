@@ -61,6 +61,52 @@ func get_enemy(type: String) -> EnemyBase:
 	return _create_new(type)
 
 
+## 根据阶段数据预创建 50% 最大需求量的敌人实例
+## stage_data: 来自 waves.json 的阶段字典（含 "waves" 数组）
+func prewarm_for_stage(stage_data: Dictionary) -> void:
+	# 统计该阶段各敌人类型的最大单波需求量
+	var max_counts: Dictionary = {}
+	var waves: Array = stage_data.get("waves", [])
+	for wave: Dictionary in waves:
+		var wave_counts: Dictionary = {}
+		var enemies_config: Array = wave.get("enemies", [])
+		for enemy_config: Dictionary in enemies_config:
+			var enemy_type: String = enemy_config.get("type", "")
+			if enemy_type == "":
+				continue
+			var count: int = int(enemy_config.get("count", 0))
+			var is_continuous: bool = enemy_config.get("spawn_continuous", false)
+			if is_continuous:
+				# 持续生成型：按 duration / interval * rate 估算
+				var duration: float = float(wave.get("duration", 60))
+				var spawn_interval: float = float(enemy_config.get("spawn_interval", 5.0))
+				var spawn_rate: int = int(enemy_config.get("spawn_rate", 1))
+				count = int(duration / spawn_interval * spawn_rate)
+			if not wave_counts.has(enemy_type):
+				wave_counts[enemy_type] = 0
+			wave_counts[enemy_type] += count
+		# 取各波次的最大值
+		for enemy_type: String in wave_counts:
+			if not max_counts.has(enemy_type) or wave_counts[enemy_type] > max_counts[enemy_type]:
+				max_counts[enemy_type] = wave_counts[enemy_type]
+
+	# 预创建 50% 的最大需求量
+	for enemy_type: String in max_counts:
+		if not SCENE_MAP.has(enemy_type):
+			continue
+		var target: int = int(max_counts[enemy_type] * 0.5)
+		var current: int = pools[enemy_type].size() if pools.has(enemy_type) else 0
+		var to_create: int = maxi(target - current, 0)
+		if to_create > 0:
+			print("[EnemyPool] 预热 %s: 创建 %d 个实例" % [enemy_type, to_create])
+		for i in range(to_create):
+			var enemy: EnemyBase = _create_new(enemy_type)
+			if enemy != null:
+				if not pools.has(enemy_type):
+					pools[enemy_type] = []
+				pools[enemy_type].append(enemy)
+
+
 ## 回收敌人到池中
 func return_enemy(enemy: EnemyBase) -> void:
 	if enemy == null:
